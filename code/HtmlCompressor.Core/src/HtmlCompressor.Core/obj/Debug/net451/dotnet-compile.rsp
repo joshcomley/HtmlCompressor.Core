@@ -8,9 +8,9 @@
 --suppress-warning:CS1705
 --optimize:False
 --output-name:HtmlCompressor.Core
---file-version:1.0.1.0
---version:1.0.1.0
---informational-version:1.0.1
+--file-version:1.0.4.0
+--version:1.0.4.0
+--informational-version:1.0.4
 --target-framework:.NETFramework,Version=v4.5.1
 --reference:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.1\Facades\System.Collections.dll
 --reference:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.1\Facades\System.Collections.Concurrent.dll
@@ -46,9 +46,10 @@
 --reference:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.1\System.dll
 --reference:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.1\System.Core.dll
 --reference:C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.5.1\Microsoft.CSharp.dll
+D:\B\HtmlCompressor.Core\code\HtmlCompressor.Core\src\HtmlCompressor.Core\HtmlCompressor.cs
+D:\B\HtmlCompressor.Core\code\HtmlCompressor.Core\src\HtmlCompressor.Core\HtmlCompressorSettings.cs
+D:\B\HtmlCompressor.Core\code\HtmlCompressor.Core\src\HtmlCompressor.Core\HtmlCompressorStatistics.cs
 D:\B\HtmlCompressor.Core\code\HtmlCompressor.Core\src\HtmlCompressor.Core\HtmlContentCompressor.cs
-D:\B\HtmlCompressor.Core\code\HtmlCompressor.Core\src\HtmlCompressor.Core\Internal\HtmlCompressor.cs
-D:\B\HtmlCompressor.Core\code\HtmlCompressor.Core\src\HtmlCompressor.Core\Internal\HtmlCompressorStatistics.cs
-D:\B\HtmlCompressor.Core\code\HtmlCompressor.Core\src\HtmlCompressor.Core\Internal\HtmlMetrics.cs
-D:\B\HtmlCompressor.Core\code\HtmlCompressor.Core\src\HtmlCompressor.Core\Internal\ICompressor.cs
+D:\B\HtmlCompressor.Core\code\HtmlCompressor.Core\src\HtmlCompressor.Core\HtmlMetrics.cs
+D:\B\HtmlCompressor.Core\code\HtmlCompressor.Core\src\HtmlCompressor.Core\ICompressor.cs
 D:\B\HtmlCompressor.Core\code\HtmlCompressor.Core\src\HtmlCompressor.Core\Properties\AssemblyInfo.cs

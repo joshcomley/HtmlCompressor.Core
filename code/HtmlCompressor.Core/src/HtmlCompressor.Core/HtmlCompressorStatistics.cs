@@ -1,4 +1,4 @@
-﻿namespace HtmlCompressor.Core.Internal
+﻿namespace HtmlCompressor.Core
 {
 	public sealed class HtmlCompressorStatistics
 	{
@@ -26,8 +26,14 @@
 			_originalMetrics = originalMetrics;
 		}
 
+		/// <summary>
+		/// <see cref="HtmlMetrics"/>
+		/// </summary>
+		/// <value>Metrics of a compressed document</value>
+		public HtmlMetrics CompressedMetrics { get; set; }
+
 		/**
-		 * Returns metrics of a compressed document
+		 * Returns 
 		 * 
 		 * @return metrics of a compressed document
 		 * @see HtmlMetrics

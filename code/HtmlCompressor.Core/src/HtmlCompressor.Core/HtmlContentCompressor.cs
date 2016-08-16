@@ -13,7 +13,7 @@ namespace HtmlCompressor.Core
 	/// the Unit Tests, which also are copied/adapted from the original Java sources.</remarks>
 	public sealed class HtmlContentCompressor
 	{
-		private readonly Internal.HtmlCompressor _compressor = new Internal.HtmlCompressor();
+		private readonly HtmlCompressor _compressor = new HtmlCompressor();
 
 		public string Compress(string html)
 		{
@@ -22,13 +22,13 @@ namespace HtmlCompressor.Core
 
 		public void AddPreservePattern(params Regex[] regexes)
 		{
-			var org = _compressor.GetPreservePatterns();
+			var org = _compressor.Settings.PreservePatterns;
 
 			var preservePatterns = new List<Regex>();
 			if (org != null) preservePatterns.AddRange(org);
 			preservePatterns.AddRange(regexes);
 
-			_compressor.SetPreservePatterns(preservePatterns);
+			_compressor.Settings.PreservePatterns = preservePatterns;
 		}
 	}
 }
