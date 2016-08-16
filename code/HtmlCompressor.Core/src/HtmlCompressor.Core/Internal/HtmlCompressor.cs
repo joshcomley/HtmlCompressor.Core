@@ -37,26 +37,26 @@ namespace HtmlCompressor.Core.Internal
 		 * Could be passed inside a list to {@link #setPreservePatterns(List) setPreservePatterns} method.
 		 */
 
-		public static readonly Regex PHP_TAG_PATTERN = new Regex("<\\?php.*?\\?>",
-																 RegexOptions.Singleline | RegexOptions.IgnoreCase);
+		public static readonly Regex PhpTagPattern = new Regex("<\\?php.*?\\?>",
+			RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
 		/**
 		 * Predefined pattern that matches <code>&lt;% ... %></code> tags. 
 		 * Could be passed inside a list to {@link #setPreservePatterns(List) setPreservePatterns} method.
 		 */
-		public static readonly Regex SERVER_SCRIPT_TAG_PATTERN = new Regex("<%.*?%>", RegexOptions.Singleline);
+		public static readonly Regex ServerScriptTagPattern = new Regex("<%.*?%>", RegexOptions.Singleline);
 
 		/**
 		 * Predefined pattern that matches <code>&lt;--# ... --></code> tags. 
 		 * Could be passed inside a list to {@link #setPreservePatterns(List) setPreservePatterns} method.
 		 */
-		public static readonly Regex SERVER_SIDE_INCLUDE_PATTERN = new Regex("<!--\\s*#.*?-->", RegexOptions.Singleline);
+		public static readonly Regex ServerSideIncludePattern = new Regex("<!--\\s*#.*?-->", RegexOptions.Singleline);
 
 		/**
 		 * Predefined list of tags that are very likely to be block-level. 
 		 * Could be passed to {@link #setRemoveSurroundingSpaces(string) setRemoveSurroundingSpaces} method.
 		 */
-		public static readonly string BLOCK_TAGS_MIN = "html,head,body,br,p";
+		public static readonly string BlockTagsMin = "html,head,body,br,p";
 
 		/**
 		 * Predefined list of tags that are block-level by default, excluding <code>&lt;div></code> and <code>&lt;li></code> tags. 
@@ -64,48 +64,14 @@ namespace HtmlCompressor.Core.Internal
 		 * Could be passed to {@link #setRemoveSurroundingSpaces(string) setRemoveSurroundingSpaces} method.
 		 */
 
-		public static readonly string BLOCK_TAGS_MAX = BLOCK_TAGS_MIN +
+		public static readonly string BlockTagsMax = BlockTagsMin +
 													   ",h1,h2,h3,h4,h5,h6,blockquote,center,dl,fieldset,form,frame,frameset,hr,noframes,ol,table,tbody,tr,td,th,tfoot,thead,ul";
 
 		/**
 		 * Could be passed to {@link #setRemoveSurroundingSpaces(string) setRemoveSurroundingSpaces} method 
 		 * to remove all surrounding spaces (not recommended).
 		 */
-		public static readonly string ALL_TAGS = "all";
-
-		private bool enabled = true;
-
-		//javascript and css compressor implementations
-		private ICompressor javaScriptCompressor = null;
-		private ICompressor cssCompressor = null;
-
-		//default settings
-		private bool _removeComments = true;
-		private bool _removeMultiSpaces = true;
-
-		//optional settings
-		private bool _removeIntertagSpaces = false;
-		private bool _removeQuotes = false;
-		private bool _compressJavaScript = false;
-		private bool _compressCss = false;
-		private bool _simpleDoctype = false;
-		private bool _removeScriptAttributes = false;
-		private bool _removeStyleAttributes = false;
-		private bool _removeLinkAttributes = false;
-		private bool _removeFormAttributes = false;
-		private bool _removeInputAttributes = false;
-		private bool _simpleBooleanAttributes = false;
-		private bool _removeJavaScriptProtocol = false;
-		private bool _removeHttpProtocol = false;
-		private bool _removeHttpsProtocol = false;
-		private bool _preserveLineBreaks = false;
-		private string _removeSurroundingSpaces = null;
-
-		private List<Regex> preservePatterns = null;
-
-		//statistics
-		private bool generateStatistics = false;
-		private HtmlCompressorStatistics statistics = null;
+		public static readonly string AllTags = "all";
 
 		////YUICompressor settings
 		//private bool yuiJsNoMunge = false;
@@ -118,152 +84,187 @@ namespace HtmlCompressor.Core.Internal
 		//private ErrorReporter yuiErrorReporter = null;
 
 		//temp replacements for preserved blocks 
-		private static readonly string tempCondCommentBlock = "%%%~COMPRESS~COND~{0}~%%%";
-		private static readonly string tempPreBlock = "%%%~COMPRESS~PRE~{0}~%%%";
-		private static readonly string tempTextAreaBlock = "%%%~COMPRESS~TEXTAREA~{0}~%%%";
-		private static readonly string tempScriptBlock = "%%%~COMPRESS~SCRIPT~{0}~%%%";
-		private static readonly string tempStyleBlock = "%%%~COMPRESS~STYLE~{0}~%%%";
-		private static readonly string tempEventBlock = "%%%~COMPRESS~EVENT~{0}~%%%";
-		private static readonly string tempLineBreakBlock = "%%%~COMPRESS~LT~{0}~%%%";
-		private static readonly string tempSkipBlock = "%%%~COMPRESS~SKIP~{0}~%%%";
-		private static readonly string tempUserBlock = "%%%~COMPRESS~USER{0}~{1}~%%%";
+		private const string TempCondCommentBlock = "%%%~COMPRESS~COND~{0}~%%%";
+		private const string TempPreBlock = "%%%~COMPRESS~PRE~{0}~%%%";
+		private const string TempTextAreaBlock = "%%%~COMPRESS~TEXTAREA~{0}~%%%";
+		private const string TempScriptBlock = "%%%~COMPRESS~SCRIPT~{0}~%%%";
+		private const string TempStyleBlock = "%%%~COMPRESS~STYLE~{0}~%%%";
+		private const string TempEventBlock = "%%%~COMPRESS~EVENT~{0}~%%%";
+		private const string TempLineBreakBlock = "%%%~COMPRESS~LT~{0}~%%%";
+		private const string TempSkipBlock = "%%%~COMPRESS~SKIP~{0}~%%%";
+		private const string TempUserBlock = "%%%~COMPRESS~USER{0}~{1}~%%%";
 
 		//compiled regex patterns
-		private static readonly Regex emptyPattern = new Regex("\\s");
+		private static readonly Regex EmptyPattern = new Regex("\\s");
 
-		private static readonly Regex skipPattern = new Regex("<!--\\s*\\{\\{\\{\\s*-->(.*?)<!--\\s*\\}\\}\\}\\s*-->",
-															  RegexOptions.Singleline | RegexOptions.IgnoreCase);
+		private static readonly Regex SkipPattern = new Regex("<!--\\s*\\{\\{\\{\\s*-->(.*?)<!--\\s*\\}\\}\\}\\s*-->",
+			RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
-		private static readonly Regex condCommentPattern = new Regex("(<!(?:--)?\\[[^\\]]+?]>)(.*?)(<!\\[[^\\]]+]-->)",
-																	 RegexOptions.Singleline | RegexOptions.IgnoreCase);
+		private static readonly Regex CondCommentPattern = new Regex("(<!(?:--)?\\[[^\\]]+?]>)(.*?)(<!\\[[^\\]]+]-->)",
+			RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
-		private static readonly Regex commentPattern = new Regex("<!---->|<!--[^\\[].*?-->",
-																 RegexOptions.Singleline | RegexOptions.IgnoreCase);
+		private static readonly Regex CommentPattern = new Regex("<!---->|<!--[^\\[].*?-->",
+			RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
-		private static readonly Regex intertagPattern_TagTag = new Regex(">\\s+<",
-																		 RegexOptions.Singleline | RegexOptions.IgnoreCase);
+		private static readonly Regex IntertagPatternTagTag = new Regex(">\\s+<",
+			RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
-		private static readonly Regex intertagPattern_TagCustom = new Regex(">\\s+%%%~",
-																			RegexOptions.Singleline | RegexOptions.IgnoreCase);
+		private static readonly Regex IntertagPatternTagCustom = new Regex(">\\s+%%%~",
+			RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
-		private static readonly Regex intertagPattern_CustomTag = new Regex("~%%%\\s+<",
-																			RegexOptions.Singleline | RegexOptions.IgnoreCase);
+		private static readonly Regex IntertagPatternCustomTag = new Regex("~%%%\\s+<",
+			RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
-		private static readonly Regex intertagPattern_CustomCustom = new Regex("~%%%\\s+%%%~",
-																			   RegexOptions.Singleline |
-																			   RegexOptions.IgnoreCase);
+		private static readonly Regex IntertagPatternCustomCustom = new Regex("~%%%\\s+%%%~",
+			RegexOptions.Singleline |
+			RegexOptions.IgnoreCase);
 
-		private static readonly Regex multispacePattern = new Regex("\\s+", RegexOptions.Singleline | RegexOptions.IgnoreCase);
+		private static readonly Regex MultispacePattern = new Regex("\\s+", RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
-		private static readonly Regex tagEndSpacePattern = new Regex("(<(?:[^>]+?))(?:\\s+?)(/?>)",
-																	 RegexOptions.Singleline | RegexOptions.IgnoreCase);
+		private static readonly Regex TagEndSpacePattern = new Regex("(<(?:[^>]+?))(?:\\s+?)(/?>)",
+			RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
-		private static readonly Regex tagLastUnquotedValuePattern = new Regex("=\\s*[a-z0-9-_]+$", RegexOptions.IgnoreCase);
+		private static readonly Regex TagLastUnquotedValuePattern = new Regex("=\\s*[a-z0-9-_]+$", RegexOptions.IgnoreCase);
 
-		private static readonly Regex tagQuotePattern = new Regex("\\s*=\\s*([\"'])([a-z0-9-_]+?)\\1(/?)(?=[^<]*?>)",
-																  RegexOptions.IgnoreCase);
+		private static readonly Regex TagQuotePattern = new Regex("\\s*=\\s*([\"'])([a-z0-9-_]+?)\\1(/?)(?=[^<]*?>)",
+			RegexOptions.IgnoreCase);
 
-		private static readonly Regex prePattern = new Regex("(<pre[^>]*?>)(.*?)(</pre>)",
-															 RegexOptions.Singleline | RegexOptions.IgnoreCase);
+		private static readonly Regex PrePattern = new Regex("(<pre[^>]*?>)(.*?)(</pre>)",
+			RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
-		private static readonly Regex taPattern = new Regex("(<textarea[^>]*?>)(.*?)(</textarea>)",
-															RegexOptions.Singleline | RegexOptions.IgnoreCase);
+		private static readonly Regex TaPattern = new Regex("(<textarea[^>]*?>)(.*?)(</textarea>)",
+			RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
-		private static readonly Regex scriptPattern = new Regex("(<script[^>]*?>)(.*?)(</script>)",
-																RegexOptions.Singleline | RegexOptions.IgnoreCase);
+		private static readonly Regex ScriptPattern = new Regex("(<script[^>]*?>)(.*?)(</script>)",
+			RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
-		private static readonly Regex stylePattern = new Regex("(<style[^>]*?>)(.*?)(</style>)",
-															   RegexOptions.Singleline | RegexOptions.IgnoreCase);
+		private static readonly Regex StylePattern = new Regex("(<style[^>]*?>)(.*?)(</style>)",
+			RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
-		private static readonly Regex tagPropertyPattern = new Regex("(\\s\\w+)\\s*=\\s*(?=[^<]*?>)", RegexOptions.IgnoreCase);
+		private static readonly Regex TagPropertyPattern = new Regex("(\\s\\w+)\\s*=\\s*(?=[^<]*?>)", RegexOptions.IgnoreCase);
 
-		private static readonly Regex cdataPattern = new Regex("\\s*<!\\[CDATA\\[(.*?)\\]\\]>\\s*",
-															   RegexOptions.Singleline | RegexOptions.IgnoreCase);
+		private static readonly Regex CdataPattern = new Regex("\\s*<!\\[CDATA\\[(.*?)\\]\\]>\\s*",
+			RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
-        	private static readonly Regex scriptCdataPattern = new Regex("/\\*\\s*<!\\[CDATA\\[\\*/(.*?)/\\*\\]\\]>\\s*\\*/",
-                                                               RegexOptions.Singleline | RegexOptions.IgnoreCase);
+		private static readonly Regex ScriptCdataPattern = new Regex("/\\*\\s*<!\\[CDATA\\[\\*/(.*?)/\\*\\]\\]>\\s*\\*/",
+			RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
-		private static readonly Regex doctypePattern = new Regex("<!DOCTYPE[^>]*>",
-																 RegexOptions.Singleline | RegexOptions.IgnoreCase);
+		private static readonly Regex DoctypePattern = new Regex("<!DOCTYPE[^>]*>",
+			RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
-		private static readonly Regex typeAttrPattern = new Regex("type\\s*=\\s*([\\\"']*)(.+?)\\1",
-																  RegexOptions.Singleline | RegexOptions.IgnoreCase);
+		private static readonly Regex TypeAttrPattern = new Regex("type\\s*=\\s*([\\\"']*)(.+?)\\1",
+			RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
-		private static readonly Regex jsTypeAttrPattern =
+		private static readonly Regex JsTypeAttrPattern =
 			new Regex("(<script[^>]*)type\\s*=\\s*([\"']*)(?:text|application)/javascript\\2([^>]*>)",
-					  RegexOptions.Singleline | RegexOptions.IgnoreCase);
+				RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
-		private static readonly Regex jsLangAttrPattern =
+		private static readonly Regex JsLangAttrPattern =
 			new Regex("(<script[^>]*)language\\s*=\\s*([\"']*)javascript\\2([^>]*>)",
-					  RegexOptions.Singleline | RegexOptions.IgnoreCase);
+				RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
-		private static readonly Regex styleTypeAttrPattern =
+		private static readonly Regex StyleTypeAttrPattern =
 			new Regex("(<style[^>]*)type\\s*=\\s*([\"']*)text/style\\2([^>]*>)",
-					  RegexOptions.Singleline | RegexOptions.IgnoreCase);
+				RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
-		private static readonly Regex linkTypeAttrPattern =
+		private static readonly Regex LinkTypeAttrPattern =
 			new Regex("(<link[^>]*)type\\s*=\\s*([\"']*)text/(?:css|plain)\\2([^>]*>)",
-					  RegexOptions.Singleline | RegexOptions.IgnoreCase);
+				RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
-		private static readonly Regex linkRelAttrPattern =
+		private static readonly Regex LinkRelAttrPattern =
 			new Regex("<link(?:[^>]*)rel\\s*=\\s*([\"']*)(?:alternate\\s+)?stylesheet\\1(?:[^>]*)>",
-					  RegexOptions.Singleline | RegexOptions.IgnoreCase);
+				RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
-		private static readonly Regex formMethodAttrPattern = new Regex("(<form[^>]*)method\\s*=\\s*([\"']*)get\\2([^>]*>)",
-																		RegexOptions.Singleline | RegexOptions.IgnoreCase);
+		private static readonly Regex FormMethodAttrPattern = new Regex("(<form[^>]*)method\\s*=\\s*([\"']*)get\\2([^>]*>)",
+			RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
-		private static readonly Regex inputTypeAttrPattern = new Regex("(<input[^>]*)type\\s*=\\s*([\"']*)text\\2([^>]*>)",
-																	   RegexOptions.Singleline | RegexOptions.IgnoreCase);
+		private static readonly Regex InputTypeAttrPattern = new Regex("(<input[^>]*)type\\s*=\\s*([\"']*)text\\2([^>]*>)",
+			RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
-		private static readonly Regex booleanAttrPattern =
+		private static readonly Regex BooleanAttrPattern =
 			new Regex("(<\\w+[^>]*)(checked|selected|disabled|readonly)\\s*=\\s*([\"']*)\\w*\\3([^>]*>)",
-					  RegexOptions.Singleline | RegexOptions.IgnoreCase);
+				RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
-		private static readonly Regex eventJsProtocolPattern = new Regex("^javascript:\\s*(.+)",
-																		 RegexOptions.Singleline | RegexOptions.IgnoreCase);
+		private static readonly Regex EventJsProtocolPattern = new Regex("^javascript:\\s*(.+)",
+			RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
-		private static readonly Regex httpProtocolPattern =
+		private static readonly Regex HttpProtocolPattern =
 			new Regex("(<[^>]+?(?:href|src|cite|action)\\s*=\\s*['\"])http:(//[^>]+?>)",
-					  RegexOptions.Singleline | RegexOptions.IgnoreCase);
+				RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
-		private static readonly Regex httpsProtocolPattern =
+		private static readonly Regex HttpsProtocolPattern =
 			new Regex("(<[^>]+?(?:href|src|cite|action)\\s*=\\s*['\"])https:(//[^>]+?>)",
-					  RegexOptions.Singleline | RegexOptions.IgnoreCase);
+				RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
-		private static readonly Regex relExternalPattern =
+		private static readonly Regex RelExternalPattern =
 			new Regex("<(?:[^>]*)rel\\s*=\\s*([\"']*)(?:alternate\\s+)?external\\1(?:[^>]*)>",
-					  RegexOptions.Singleline | RegexOptions.IgnoreCase);
+				RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
-		private static readonly Regex eventPattern1 =
+		private static readonly Regex EventPattern1 =
 			new Regex("(\\son[a-z]+\\s*=\\s*\")([^\"\\\\\\r\\n]*(?:\\\\.[^\"\\\\\\r\\n]*)*)(\")", RegexOptions.IgnoreCase);
+
 		//unmasked: \son[a-z]+\s*=\s*"[^"\\\r\n]*(?:\\.[^"\\\r\n]*)*"
 
-		private static readonly Regex eventPattern2 =
+		private static readonly Regex EventPattern2 =
 			new Regex("(\\son[a-z]+\\s*=\\s*')([^'\\\\\\r\\n]*(?:\\\\.[^'\\\\\\r\\n]*)*)(')", RegexOptions.IgnoreCase);
 
-		private static readonly Regex lineBreakPattern = new Regex("(?:[ \t]*(\\r?\\n)[ \t]*)+");
+		private static readonly Regex LineBreakPattern = new Regex("(?:[ \t]*(\\r?\\n)[ \t]*)+");
 
-		private static readonly Regex surroundingSpacesMinPattern =
-			new Regex("\\s*(</?(?:" + BLOCK_TAGS_MIN.Replace(",", "|") + ")(?:>|[\\s/][^>]*>))\\s*",
-					  RegexOptions.Singleline | RegexOptions.IgnoreCase);
+		//private static readonly Regex SurroundingSpacesMinPattern =
+		//	new Regex("\\s*(</?(?:" + BlockTagsMin.Replace(",", "|") + ")(?:>|[\\s/][^>]*>))\\s*",
+		//		RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
-		private static readonly Regex surroundingSpacesMaxPattern =
-			new Regex("\\s*(</?(?:" + BLOCK_TAGS_MAX.Replace(",", "|") + ")(?:>|[\\s/][^>]*>))\\s*",
-					  RegexOptions.Singleline | RegexOptions.IgnoreCase);
+		//private static readonly Regex SurroundingSpacesMaxPattern =
+		//	new Regex("\\s*(</?(?:" + BlockTagsMax.Replace(",", "|") + ")(?:>|[\\s/][^>]*>))\\s*",
+		//		RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
-		private static readonly Regex surroundingSpacesAllPattern = new Regex("\\s*(<[^>]+>)\\s*",
-																			  RegexOptions.Singleline |
-																			  RegexOptions.IgnoreCase);
+		private static readonly Regex SurroundingSpacesAllPattern = new Regex("\\s*(<[^>]+>)\\s*",
+			RegexOptions.Singleline |
+			RegexOptions.IgnoreCase);
 
 		//patterns for searching for temporary replacements
-		private static readonly Regex tempCondCommentPattern = new Regex("%%%~COMPRESS~COND~(\\d+?)~%%%");
-		private static readonly Regex tempPrePattern = new Regex("%%%~COMPRESS~PRE~(\\d+?)~%%%");
-		private static readonly Regex tempTextAreaPattern = new Regex("%%%~COMPRESS~TEXTAREA~(\\d+?)~%%%");
-		private static readonly Regex tempScriptPattern = new Regex("%%%~COMPRESS~SCRIPT~(\\d+?)~%%%");
-		private static readonly Regex tempStylePattern = new Regex("%%%~COMPRESS~STYLE~(\\d+?)~%%%");
-		private static readonly Regex tempEventPattern = new Regex("%%%~COMPRESS~EVENT~(\\d+?)~%%%");
-		private static readonly Regex tempSkipPattern = new Regex("%%%~COMPRESS~SKIP~(\\d+?)~%%%");
-		private static readonly Regex tempLineBreakPattern = new Regex("%%%~COMPRESS~LT~(\\d+?)~%%%");
+		private static readonly Regex TempCondCommentPattern = new Regex("%%%~COMPRESS~COND~(\\d+?)~%%%");
+		private static readonly Regex TempPrePattern = new Regex("%%%~COMPRESS~PRE~(\\d+?)~%%%");
+		private static readonly Regex TempTextAreaPattern = new Regex("%%%~COMPRESS~TEXTAREA~(\\d+?)~%%%");
+		private static readonly Regex TempScriptPattern = new Regex("%%%~COMPRESS~SCRIPT~(\\d+?)~%%%");
+		private static readonly Regex TempStylePattern = new Regex("%%%~COMPRESS~STYLE~(\\d+?)~%%%");
+		private static readonly Regex TempEventPattern = new Regex("%%%~COMPRESS~EVENT~(\\d+?)~%%%");
+		private static readonly Regex TempSkipPattern = new Regex("%%%~COMPRESS~SKIP~(\\d+?)~%%%");
+		private static readonly Regex TempLineBreakPattern = new Regex("%%%~COMPRESS~LT~(\\d+?)~%%%");
+		private bool _compressCss;
+		private bool _compressJavaScript;
+		private bool _preserveLineBreaks;
+
+		//default settings
+		private bool _removeComments = true;
+		private bool _removeFormAttributes;
+		private bool _removeHttpProtocol;
+		private bool _removeHttpsProtocol;
+		private bool _removeInputAttributes;
+
+		//optional settings
+		private bool _removeIntertagSpaces;
+		private bool _removeJavaScriptProtocol;
+		private bool _removeLinkAttributes;
+		private bool _removeMultiSpaces = true;
+		private bool _removeQuotes;
+		private bool _removeScriptAttributes;
+		private bool _removeStyleAttributes;
+		private string _removeSurroundingSpaces;
+		private bool _simpleBooleanAttributes;
+		private bool _simpleDoctype;
+		private ICompressor _cssCompressor;
+
+		private bool _enabled = true;
+
+		//statistics
+		private bool _generateStatistics;
+
+		//javascript and css compressor implementations
+		private ICompressor _javaScriptCompressor;
+
+		private List<Regex> _preservePatterns;
+		private HtmlCompressorStatistics _statistics;
 
 		/**
 		 * The main method that compresses given HTML source and returns compressed
@@ -273,106 +274,101 @@ namespace HtmlCompressor.Core.Internal
 		 * @return compressed content.
 		 */
 
-		public string compress(string html)
+		public string Compress(string html)
 		{
-			if (!enabled || string.IsNullOrEmpty(html))
+			if (!_enabled || string.IsNullOrEmpty(html))
 			{
 				return html;
 			}
 
 			//calculate uncompressed statistics
-			initStatistics(html);
+			InitStatistics(html);
 
 			//preserved block containers
-			List<string> condCommentBlocks = new List<string>();
-			List<string> preBlocks = new List<string>();
-			List<string> taBlocks = new List<string>();
-			List<string> scriptBlocks = new List<string>();
-			List<string> styleBlocks = new List<string>();
-			List<string> eventBlocks = new List<string>();
-			List<string> skipBlocks = new List<string>();
-			List<string> lineBreakBlocks = new List<string>();
-			List<List<string>> userBlocks = new List<List<string>>();
+			var condCommentBlocks = new List<string>();
+			var preBlocks = new List<string>();
+			var taBlocks = new List<string>();
+			var scriptBlocks = new List<string>();
+			var styleBlocks = new List<string>();
+			var eventBlocks = new List<string>();
+			var skipBlocks = new List<string>();
+			var lineBreakBlocks = new List<string>();
+			var userBlocks = new List<List<string>>();
 
 			//preserve blocks
-			html = preserveBlocks(html, preBlocks, taBlocks, scriptBlocks, styleBlocks, eventBlocks, condCommentBlocks,
-								  skipBlocks, lineBreakBlocks, userBlocks);
+			html = PreserveBlocks(html, preBlocks, taBlocks, scriptBlocks, styleBlocks, eventBlocks, condCommentBlocks,
+				skipBlocks, lineBreakBlocks, userBlocks);
 
 			//process pure html
-			html = processHtml(html);
+			html = ProcessHtml(html);
 
 			//process preserved blocks
-			processPreservedBlocks(preBlocks, taBlocks, scriptBlocks, styleBlocks, eventBlocks, condCommentBlocks, skipBlocks,
-								   lineBreakBlocks, userBlocks);
+			ProcessPreservedBlocks(preBlocks, taBlocks, scriptBlocks, styleBlocks, eventBlocks, condCommentBlocks, skipBlocks,
+				lineBreakBlocks, userBlocks);
 
 			//put preserved blocks back
-			html = returnBlocks(html, preBlocks, taBlocks, scriptBlocks, styleBlocks, eventBlocks, condCommentBlocks, skipBlocks,
-								lineBreakBlocks, userBlocks);
+			html = ReturnBlocks(html, preBlocks, taBlocks, scriptBlocks, styleBlocks, eventBlocks, condCommentBlocks, skipBlocks,
+				lineBreakBlocks, userBlocks);
 
 			//calculate compressed statistics
-			endStatistics(html);
+			EndStatistics(html);
 
 			return html;
 		}
 
-		private void initStatistics(string html)
+		private void InitStatistics(string html)
 		{
 			//create stats
-			if (generateStatistics)
+			if (_generateStatistics)
 			{
-				statistics = new HtmlCompressorStatistics();
-				statistics.setTime(DateTime.Now.Ticks);
-				statistics.getOriginalMetrics().setFilesize(html.Length);
+				_statistics = new HtmlCompressorStatistics();
+				_statistics.SetTime(DateTime.Now.Ticks);
+				_statistics.GetOriginalMetrics().SetFilesize(html.Length);
 
 				//calculate number of empty chars
-				var matcher = emptyPattern.Matches(html);
-				foreach (Match match in matcher)
-				{
-					statistics.getOriginalMetrics().setEmptyChars(statistics.getOriginalMetrics().getEmptyChars() + 1);
-				}
+				var matcher = EmptyPattern.Matches(html);
+				_statistics.GetOriginalMetrics().SetEmptyChars(_statistics.GetOriginalMetrics().GetEmptyChars() + matcher.Count);
 			}
 			else
 			{
-				statistics = null;
+				_statistics = null;
 			}
 		}
 
-		private void endStatistics(string html)
+		private void EndStatistics(string html)
 		{
 			//calculate compression time
-			if (generateStatistics)
+			if (_generateStatistics)
 			{
-				statistics.setTime(DateTime.Now.Ticks - statistics.getTime());
-				statistics.getCompressedMetrics().setFilesize(html.Length);
+				_statistics.SetTime(DateTime.Now.Ticks - _statistics.GetTime());
+				_statistics.GetCompressedMetrics().SetFilesize(html.Length);
 
 				//calculate number of empty chars
-				var matcher = emptyPattern.Matches(html);
-				foreach (Match match in matcher)
-				{
-					statistics.getCompressedMetrics().setEmptyChars(statistics.getCompressedMetrics().getEmptyChars() + 1);
-				}
+				var matcher = EmptyPattern.Matches(html);
+				_statistics.GetCompressedMetrics().SetEmptyChars(_statistics.GetCompressedMetrics().GetEmptyChars() + matcher.Count);
 			}
 		}
 
-		private string preserveBlocks(
+		private string PreserveBlocks(
 			string html,
-			List<string> preBlocks,
-			List<string> taBlocks,
-			List<string> scriptBlocks,
-			List<string> styleBlocks,
-			List<string> eventBlocks,
-			List<string> condCommentBlocks,
-			List<string> skipBlocks, List<string> lineBreakBlocks,
-			List<List<string>> userBlocks)
+			ICollection<string> preBlocks,
+			ICollection<string> taBlocks,
+			ICollection<string> scriptBlocks,
+			ICollection<string> styleBlocks,
+			ICollection<string> eventBlocks,
+			ICollection<string> condCommentBlocks,
+			ICollection<string> skipBlocks,
+			ICollection<string> lineBreakBlocks,
+			ICollection<List<string>> userBlocks)
 		{
 			//preserve user blocks
-			if (preservePatterns != null)
+			if (_preservePatterns != null)
 			{
-				for (var p = 0; p < preservePatterns.Count; p++)
+				for (var p = 0; p < _preservePatterns.Count; p++)
 				{
 					var userBlock = new List<string>();
 
-					var matches = preservePatterns[p].Matches(html);
+					var matches = _preservePatterns[p].Matches(html);
 					var index = 0;
 					var sb = new StringBuilder();
 					var lastValue = 0;
@@ -385,7 +381,7 @@ namespace HtmlCompressor.Core.Internal
 
 							sb.Append(html.Substring(lastValue, match.Index - lastValue));
 							//matches.appendReplacement(sb1, string.Format(tempUserBlock, p, index++));
-							sb.Append(match.Result(string.Format(tempUserBlock, p, index++)));
+							sb.Append(match.Result(string.Format(TempUserBlock, p, index++)));
 
 							lastValue = match.Index + match.Length;
 						}
@@ -404,7 +400,7 @@ namespace HtmlCompressor.Core.Internal
 			//preserve <!-- {{{ ---><!-- }}} ---> skip blocks
 			if (true)
 			{
-				var matcher = skipPattern.Matches(html);
+				var matcher = SkipPattern.Matches(html);
 				var sb = new StringBuilder();
 				var lastValue = 0;
 
@@ -416,7 +412,7 @@ namespace HtmlCompressor.Core.Internal
 
 						sb.Append(html.Substring(lastValue, match.Index - lastValue));
 						//matcher.appendReplacement(sb, string.Format(tempSkipBlock, skipBlockIndex++));
-						sb.Append(match.Result(string.Format(tempSkipBlock, skipBlockIndex++)));
+						sb.Append(match.Result(string.Format(TempSkipBlock, skipBlockIndex++)));
 
 						lastValue = match.Index + match.Length;
 					}
@@ -431,8 +427,8 @@ namespace HtmlCompressor.Core.Internal
 			//preserve conditional comments
 			if (true)
 			{
-				var condCommentCompressor = createCompressorClone();
-				var matcher = condCommentPattern.Matches(html);
+				var condCommentCompressor = CreateCompressorClone();
+				var matcher = CondCommentPattern.Matches(html);
 				var index = 0;
 				var sb = new StringBuilder();
 				var lastValue = 0;
@@ -442,11 +438,11 @@ namespace HtmlCompressor.Core.Internal
 					if (match.Groups[2].Value.Trim().Length > 0)
 					{
 						condCommentBlocks.Add(
-							match.Groups[1].Value + condCommentCompressor.compress(match.Groups[2].Value) + match.Groups[3].Value);
+							match.Groups[1].Value + condCommentCompressor.Compress(match.Groups[2].Value) + match.Groups[3].Value);
 
 						sb.Append(html.Substring(lastValue, match.Index - lastValue));
 						//matcher.appendReplacement(sb, string.Format(tempCondCommentBlock, index++));
-						sb.Append(match.Result(string.Format(tempCondCommentBlock, index++)));
+						sb.Append(match.Result(string.Format(TempCondCommentBlock, index++)));
 
 						lastValue = match.Index + match.Length;
 					}
@@ -461,7 +457,7 @@ namespace HtmlCompressor.Core.Internal
 			//preserve inline events
 			if (true)
 			{
-				var matcher = eventPattern1.Matches(html);
+				var matcher = EventPattern1.Matches(html);
 				var index = 0;
 				var sb = new StringBuilder();
 				var lastValue = 0;
@@ -474,7 +470,7 @@ namespace HtmlCompressor.Core.Internal
 
 						sb.Append(html.Substring(lastValue, match.Index - lastValue));
 						//matcher.appendReplacement(sb, "$1" + string.Format(tempEventBlock, index++) + "$3");
-						sb.Append(match.Result("$1" + string.Format(tempEventBlock, index++) + "$3"));
+						sb.Append(match.Result("$1" + string.Format(TempEventBlock, index++) + "$3"));
 
 						lastValue = match.Index + match.Length;
 					}
@@ -488,7 +484,7 @@ namespace HtmlCompressor.Core.Internal
 
 			if (true)
 			{
-				var matcher = eventPattern2.Matches(html);
+				var matcher = EventPattern2.Matches(html);
 				var index = 0;
 				var sb = new StringBuilder();
 				var lastValue = 0;
@@ -501,7 +497,7 @@ namespace HtmlCompressor.Core.Internal
 
 						sb.Append(html.Substring(lastValue, match.Index - lastValue));
 						//matcher.appendReplacement(sb, "$1" + string.Format(tempEventBlock, index++) + "$3");
-						sb.Append(match.Result( "$1" + string.Format(tempEventBlock, index++) + "$3"));
+						sb.Append(match.Result("$1" + string.Format(TempEventBlock, index++) + "$3"));
 
 						lastValue = match.Index + match.Length;
 					}
@@ -516,7 +512,7 @@ namespace HtmlCompressor.Core.Internal
 			//preserve PRE tags
 			if (true)
 			{
-				var matcher = prePattern.Matches(html);
+				var matcher = PrePattern.Matches(html);
 				var index = 0;
 				var sb = new StringBuilder();
 				var lastValue = 0;
@@ -529,7 +525,7 @@ namespace HtmlCompressor.Core.Internal
 
 						sb.Append(html.Substring(lastValue, match.Index - lastValue));
 						//matcher.appendReplacement(sb, "$1" + string.Format(tempPreBlock, index++) + "$3");
-						sb.Append(match.Result("$1" + string.Format(tempPreBlock, index++) + "$3"));
+						sb.Append(match.Result("$1" + string.Format(TempPreBlock, index++) + "$3"));
 
 						lastValue = match.Index + match.Length;
 					}
@@ -544,7 +540,7 @@ namespace HtmlCompressor.Core.Internal
 			//preserve SCRIPT tags
 			if (true)
 			{
-				var matcher = scriptPattern.Matches(html);
+				var matcher = ScriptPattern.Matches(html);
 				var index = 0;
 				var sb = new StringBuilder();
 				var lastValue = 0;
@@ -554,10 +550,9 @@ namespace HtmlCompressor.Core.Internal
 					//ignore empty scripts
 					if (match.Groups[2].Value.Trim().Length > 0)
 					{
-
 						//check type
-						string type = "";
-						var typeMatcher = typeAttrPattern.Match(match.Groups[1].Value);
+						var type = "";
+						var typeMatcher = TypeAttrPattern.Match(match.Groups[1].Value);
 						if (typeMatcher.Success)
 						{
 							type = typeMatcher.Groups[2].Value.ToLowerInvariant();
@@ -570,7 +565,7 @@ namespace HtmlCompressor.Core.Internal
 
 							sb.Append(html.Substring(lastValue, match.Index - lastValue));
 							//matcher.appendReplacement(sb, "$1" + string.Format(tempScriptBlock, index++) + "$3");
-							sb.Append(match.Result("$1" + string.Format(tempScriptBlock, index++) + "$3"));
+							sb.Append(match.Result("$1" + string.Format(TempScriptBlock, index++) + "$3"));
 
 							lastValue = match.Index + match.Length;
 						}
@@ -585,7 +580,7 @@ namespace HtmlCompressor.Core.Internal
 
 							sb.Append(html.Substring(lastValue, match.Index - lastValue));
 							//matcher.appendReplacement(sb, "$1" + string.Format(tempSkipBlock, skipBlockIndex++) + "$3");
-							sb.Append(match.Result("$1" + string.Format(tempSkipBlock, skipBlockIndex++) + "$3"));
+							sb.Append(match.Result("$1" + string.Format(TempSkipBlock, skipBlockIndex++) + "$3"));
 
 							lastValue = match.Index + match.Length;
 						}
@@ -601,7 +596,7 @@ namespace HtmlCompressor.Core.Internal
 			//preserve STYLE tags
 			if (true)
 			{
-				var matcher = stylePattern.Matches(html);
+				var matcher = StylePattern.Matches(html);
 				var index = 0;
 				var sb = new StringBuilder();
 				var lastValue = 0;
@@ -614,7 +609,7 @@ namespace HtmlCompressor.Core.Internal
 
 						sb.Append(html.Substring(lastValue, match.Index - lastValue));
 						//matcher.appendReplacement(sb, "$1" + string.Format(tempStyleBlock, index++) + "$3");
-						sb.Append(match.Result("$1" + string.Format(tempStyleBlock, index++) + "$3"));
+						sb.Append(match.Result("$1" + string.Format(TempStyleBlock, index++) + "$3"));
 
 						lastValue = match.Index + match.Length;
 					}
@@ -629,7 +624,7 @@ namespace HtmlCompressor.Core.Internal
 			//preserve TEXTAREA tags
 			if (true)
 			{
-				var matcher = taPattern.Matches(html);
+				var matcher = TaPattern.Matches(html);
 				var index = 0;
 				var sb = new StringBuilder();
 				var lastValue = 0;
@@ -642,7 +637,7 @@ namespace HtmlCompressor.Core.Internal
 
 						sb.Append(html.Substring(lastValue, match.Index - lastValue));
 						//matcher.appendReplacement(sb, "$1" + string.Format(tempTextAreaBlock, index++) + "$3");
-						sb.Append(match.Result("$1"+ string.Format(tempTextAreaBlock, index++) + "$3"));
+						sb.Append(match.Result("$1" + string.Format(TempTextAreaBlock, index++) + "$3"));
 
 						lastValue = match.Index + match.Length;
 					}
@@ -657,7 +652,7 @@ namespace HtmlCompressor.Core.Internal
 			//preserve line breaks
 			if (_preserveLineBreaks)
 			{
-				var matcher = lineBreakPattern.Matches(html);
+				var matcher = LineBreakPattern.Matches(html);
 				var index = 0;
 				var sb = new StringBuilder();
 				var lastValue = 0;
@@ -668,7 +663,7 @@ namespace HtmlCompressor.Core.Internal
 
 					sb.Append(html.Substring(lastValue, match.Index - lastValue));
 					//matcher.appendReplacement(sb, string.Format(tempLineBreakBlock, index++));
-					sb.Append(match.Result(string.Format(tempLineBreakBlock, index++)));
+					sb.Append(match.Result(string.Format(TempLineBreakBlock, index++)));
 
 					lastValue = match.Index + match.Length;
 				}
@@ -682,7 +677,7 @@ namespace HtmlCompressor.Core.Internal
 			return html;
 		}
 
-		private string returnBlocks(
+		private string ReturnBlocks(
 			string html,
 			List<string> preBlocks,
 			List<string> taBlocks,
@@ -697,7 +692,7 @@ namespace HtmlCompressor.Core.Internal
 			//put line breaks back
 			if (_preserveLineBreaks)
 			{
-				var matcher = tempLineBreakPattern.Matches(html);
+				var matcher = TempLineBreakPattern.Matches(html);
 				var sb = new StringBuilder();
 				var lastValue = 0;
 
@@ -723,18 +718,18 @@ namespace HtmlCompressor.Core.Internal
 			//put TEXTAREA blocks back
 			if (true)
 			{
-				var matcher = tempTextAreaPattern.Matches(html);
+				var matcher = TempTextAreaPattern.Matches(html);
 				var sb = new StringBuilder();
 				var lastValue = 0;
 
 				foreach (Match match in matcher)
 				{
-					int i = int.Parse(match.Groups[1].Value);
+					var i = int.Parse(match.Groups[1].Value);
 					if (taBlocks.Count > i)
 					{
 						sb.Append(html.Substring(lastValue, match.Index - lastValue));
 						//matcher.appendReplacement(sb, Regex.Escape(taBlocks[i]));
-						sb.Append(match.Result(/*Regex.Escape*/(taBlocks[i])));
+						sb.Append(match.Result( /*Regex.Escape*/taBlocks[i]));
 
 						lastValue = match.Index + match.Length;
 					}
@@ -749,18 +744,18 @@ namespace HtmlCompressor.Core.Internal
 			//put STYLE blocks back
 			if (true)
 			{
-				var matcher = tempStylePattern.Matches(html);
+				var matcher = TempStylePattern.Matches(html);
 				var sb = new StringBuilder();
 				var lastValue = 0;
 
 				foreach (Match match in matcher)
 				{
-					int i = int.Parse(match.Groups[1].Value);
+					var i = int.Parse(match.Groups[1].Value);
 					if (styleBlocks.Count > i)
 					{
 						sb.Append(html.Substring(lastValue, match.Index - lastValue));
 						//matcher.appendReplacement(sb, Regex.Escape(styleBlocks[i]));
-						sb.Append(match.Result(/*Regex.Escape*/(styleBlocks[i])));
+						sb.Append(match.Result( /*Regex.Escape*/styleBlocks[i]));
 
 						lastValue = match.Index + match.Length;
 					}
@@ -775,18 +770,18 @@ namespace HtmlCompressor.Core.Internal
 			//put SCRIPT blocks back
 			if (true)
 			{
-				var matcher = tempScriptPattern.Matches(html);
+				var matcher = TempScriptPattern.Matches(html);
 				var sb = new StringBuilder();
 				var lastValue = 0;
 
 				foreach (Match match in matcher)
 				{
-					int i = int.Parse(match.Groups[1].Value);
+					var i = int.Parse(match.Groups[1].Value);
 					if (scriptBlocks.Count > i)
 					{
 						sb.Append(html.Substring(lastValue, match.Index - lastValue));
 						//matcher.appendReplacement(sb, Regex.Escape(scriptBlocks[i]));
-						sb.Append(match.Result(/*Regex.Escape*/(scriptBlocks[i])));
+						sb.Append(match.Result( /*Regex.Escape*/scriptBlocks[i]));
 
 						lastValue = match.Index + match.Length;
 					}
@@ -801,18 +796,18 @@ namespace HtmlCompressor.Core.Internal
 			//put PRE blocks back
 			if (true)
 			{
-				var matcher = tempPrePattern.Matches(html);
+				var matcher = TempPrePattern.Matches(html);
 				var sb = new StringBuilder();
 				var lastValue = 0;
 
 				foreach (Match match in matcher)
 				{
-					int i = int.Parse(match.Groups[1].Value);
+					var i = int.Parse(match.Groups[1].Value);
 					if (preBlocks.Count > i)
 					{
 						sb.Append(html.Substring(lastValue, match.Index - lastValue));
 						//matcher.appendReplacement(sb, Regex.Escape(preBlocks[i]));
-						sb.Append(match.Result(/*Regex.Escape*/(preBlocks[i])));
+						sb.Append(match.Result( /*Regex.Escape*/preBlocks[i]));
 
 						lastValue = match.Index + match.Length;
 					}
@@ -827,18 +822,18 @@ namespace HtmlCompressor.Core.Internal
 			//put event blocks back
 			if (true)
 			{
-				var matcher = tempEventPattern.Matches(html);
+				var matcher = TempEventPattern.Matches(html);
 				var sb = new StringBuilder();
 				var lastValue = 0;
 
 				foreach (Match match in matcher)
 				{
-					int i = int.Parse(match.Groups[1].Value);
+					var i = int.Parse(match.Groups[1].Value);
 					if (eventBlocks.Count > i)
 					{
 						sb.Append(html.Substring(lastValue, match.Index - lastValue));
 						//matcher.appendReplacement(sb, Regex.Escape(eventBlocks[i]));
-						sb.Append(match.Result(/*Regex.Escape*/(eventBlocks[i])));
+						sb.Append(match.Result( /*Regex.Escape*/eventBlocks[i]));
 
 						lastValue = match.Index + match.Length;
 					}
@@ -853,18 +848,18 @@ namespace HtmlCompressor.Core.Internal
 			//put conditional comments back
 			if (true)
 			{
-				var matcher = tempCondCommentPattern.Matches(html);
+				var matcher = TempCondCommentPattern.Matches(html);
 				var sb = new StringBuilder();
 				var lastValue = 0;
 
 				foreach (Match match in matcher)
 				{
-					int i = int.Parse(match.Groups[1].Value);
+					var i = int.Parse(match.Groups[1].Value);
 					if (condCommentBlocks.Count > i)
 					{
 						sb.Append(html.Substring(lastValue, match.Index - lastValue));
 						//matcher.appendReplacement(sb, Regex.Escape(condCommentBlocks[i]));
-						sb.Append(match.Result(/*Regex.Escape*/(condCommentBlocks[i])));
+						sb.Append(match.Result( /*Regex.Escape*/condCommentBlocks[i]));
 
 						lastValue = match.Index + match.Length;
 					}
@@ -879,18 +874,18 @@ namespace HtmlCompressor.Core.Internal
 			//put skip blocks back
 			if (true)
 			{
-				var matcher = tempSkipPattern.Matches(html);
+				var matcher = TempSkipPattern.Matches(html);
 				var sb = new StringBuilder();
 				var lastValue = 0;
 
 				foreach (Match match in matcher)
 				{
-					int i = int.Parse(match.Groups[1].Value);
+					var i = int.Parse(match.Groups[1].Value);
 					if (skipBlocks.Count > i)
 					{
 						sb.Append(html.Substring(lastValue, match.Index - lastValue));
 						//matcher.appendReplacement(sb, Regex.Escape(skipBlocks[i]));
-						sb.Append(match.Result(/*Regex.Escape*/(skipBlocks[i])));
+						sb.Append(match.Result( /*Regex.Escape*/skipBlocks[i]));
 
 						lastValue = match.Index + match.Length;
 					}
@@ -903,23 +898,23 @@ namespace HtmlCompressor.Core.Internal
 			}
 
 			//put user blocks back
-			if (preservePatterns != null)
+			if (_preservePatterns != null)
 			{
-				for (int p = preservePatterns.Count - 1; p >= 0; p--)
+				for (var p = _preservePatterns.Count - 1; p >= 0; p--)
 				{
-					Regex tempUserPattern = new Regex("%%%~COMPRESS~USER" + p + "~(\\d+?)~%%%");
+					var tempUserPattern = new Regex("%%%~COMPRESS~USER" + p + "~(\\d+?)~%%%");
 					var matcher = tempUserPattern.Matches(html);
 					var sb = new StringBuilder();
 					var lastValue = 0;
 
 					foreach (Match match in matcher)
 					{
-						int i = int.Parse(match.Groups[1].Value);
+						var i = int.Parse(match.Groups[1].Value);
 						if (userBlocks.Count > p && userBlocks[p].Count > i)
 						{
 							sb.Append(html.Substring(lastValue, match.Index - lastValue));
 							//matcher.appendReplacement(sb, Regex.Escape(userBlocks[p][i]));
-							sb.Append(match.Result(/*Regex.Escape*/(userBlocks[p][i])));
+							sb.Append(match.Result( /*Regex.Escape*/userBlocks[p][i]));
 
 							lastValue = match.Index + match.Length;
 						}
@@ -935,80 +930,72 @@ namespace HtmlCompressor.Core.Internal
 			return html;
 		}
 
-		private string processHtml(string html)
+		private string ProcessHtml(string html)
 		{
-
 			//remove comments
-			html = removeComments(html);
+			html = RemoveComments(html);
 
 			//simplify doctype
-			html = simpleDoctype(html);
+			html = SimpleDoctype(html);
 
 			//remove script attributes
-			html = removeScriptAttributes(html);
+			html = RemoveScriptAttributes(html);
 
 			//remove style attributes
-			html = removeStyleAttributes(html);
+			html = RemoveStyleAttributes(html);
 
 			//remove link attributes
-			html = removeLinkAttributes(html);
+			html = RemoveLinkAttributes(html);
 
 			//remove form attributes
-			html = removeFormAttributes(html);
+			html = RemoveFormAttributes(html);
 
 			//remove input attributes
-			html = removeInputAttributes(html);
+			html = RemoveInputAttributes(html);
 
 			//simplify bool attributes
-			html = simpleBooleanAttributes(html);
+			html = SimpleBooleanAttributes(html);
 
 			//remove http from attributes
-			html = removeHttpProtocol(html);
+			html = RemoveHttpProtocol(html);
 
 			//remove https from attributes
-			html = removeHttpsProtocol(html);
+			html = RemoveHttpsProtocol(html);
 
 			//remove inter-tag spaces
-			html = removeIntertagSpaces(html);
+			html = RemoveIntertagSpaces(html);
 
 			//remove multi whitespace characters
-			html = removeMultiSpaces(html);
+			html = RemoveMultiSpaces(html);
 
 			//remove spaces around equals sign and ending spaces
-			html = removeSpacesInsideTags(html);
+			html = RemoveSpacesInsideTags(html);
 
 			//remove quotes from tag attributes
-			html = removeQuotesInsideTags(html);
+			html = RemoveQuotesInsideTags(html);
 
 			//remove surrounding spaces
-			html = removeSurroundingSpaces(html);
+			html = RemoveSurroundingSpaces(html);
 
 			return html.Trim();
 		}
 
-		private string removeSurroundingSpaces(string html)
+		private string RemoveSurroundingSpaces(string html)
 		{
 			//remove spaces around provided tags
 			if (_removeSurroundingSpaces != null)
 			{
 				Regex pattern;
-				if (string.Compare(_removeSurroundingSpaces, BLOCK_TAGS_MIN, StringComparison.CurrentCultureIgnoreCase) == 0)
+				if (string.Compare(_removeSurroundingSpaces, BlockTagsMin, StringComparison.CurrentCultureIgnoreCase) == 0
+					|| string.Compare(_removeSurroundingSpaces, BlockTagsMax, StringComparison.CurrentCultureIgnoreCase) == 0
+					|| string.Compare(_removeSurroundingSpaces, AllTags, StringComparison.CurrentCultureIgnoreCase) == 0)
 				{
-					pattern = surroundingSpacesMinPattern;
-				}
-				else if (string.Compare(_removeSurroundingSpaces, BLOCK_TAGS_MAX, StringComparison.CurrentCultureIgnoreCase) == 0)
-				{
-					pattern = surroundingSpacesMaxPattern;
-				}
-				if (string.Compare(_removeSurroundingSpaces, ALL_TAGS, StringComparison.CurrentCultureIgnoreCase) == 0)
-				{
-					pattern = surroundingSpacesAllPattern;
+					pattern = SurroundingSpacesAllPattern;
 				}
 				else
 				{
-					pattern = new Regex(string.Format("\\s*(</?(?:{0})(?:>|[\\s/][^>]*>))\\s*",
-													  _removeSurroundingSpaces.Replace(",", "|")),
-										RegexOptions.Singleline | RegexOptions.IgnoreCase);
+					pattern = new Regex($"\\s*(</?(?:{_removeSurroundingSpaces.Replace(",", "|")})(?:>|[\\s/][^>]*>))\\s*",
+						RegexOptions.Singleline | RegexOptions.IgnoreCase);
 				}
 
 				var matcher = pattern.Matches(html);
@@ -1028,17 +1015,16 @@ namespace HtmlCompressor.Core.Internal
 				sb.Append(html.Substring(lastValue));
 
 				html = sb.ToString();
-
 			}
 			return html;
 		}
 
-		private string removeQuotesInsideTags(string html)
+		private string RemoveQuotesInsideTags(string html)
 		{
 			//remove quotes from tag attributes
 			if (_removeQuotes)
 			{
-				var matcher = tagQuotePattern.Matches(html);
+				var matcher = TagQuotePattern.Matches(html);
 				var sb = new StringBuilder();
 				var lastValue = 0;
 
@@ -1067,26 +1053,25 @@ namespace HtmlCompressor.Core.Internal
 				sb.Append(html.Substring(lastValue));
 
 				html = sb.ToString();
-
 			}
 			return html;
 		}
 
-		private string removeSpacesInsideTags(string html)
+		private string RemoveSpacesInsideTags(string html)
 		{
 			//remove spaces around equals sign inside tags
-			html = tagPropertyPattern.Replace(html, "$1=");
+			html = TagPropertyPattern.Replace(html, "$1=");
 
 			//remove ending spaces inside tags
 			//html = tagEndSpacePattern.Matches(html).Replace("$1$2");
-			var matcher = tagEndSpacePattern.Matches(html);
+			var matcher = TagEndSpacePattern.Matches(html);
 			var sb = new StringBuilder();
 			var lastValue = 0;
 
 			foreach (Match match in matcher)
 			{
 				//keep space if attribute value is unquoted before trailing slash
-				if (match.Groups[2].Value.StartsWith("/") && tagLastUnquotedValuePattern.IsMatch(match.Groups[1].Value))
+				if (match.Groups[2].Value.StartsWith("/") && TagLastUnquotedValuePattern.IsMatch(match.Groups[1].Value))
 				{
 					sb.Append(html.Substring(lastValue, match.Index - lastValue));
 					//matcher.appendReplacement(sb, "$1 $2");
@@ -1112,86 +1097,85 @@ namespace HtmlCompressor.Core.Internal
 			return html;
 		}
 
-		private string removeMultiSpaces(string html)
+		private string RemoveMultiSpaces(string html)
 		{
 			//collapse multiple spaces
 			if (_removeMultiSpaces)
 			{
-				html = multispacePattern.Replace(html, " ");
+				html = MultispacePattern.Replace(html, " ");
 			}
 			return html;
 		}
 
-		private string removeIntertagSpaces(string html)
+		private string RemoveIntertagSpaces(string html)
 		{
 			//remove inter-tag spaces
 			if (_removeIntertagSpaces)
 			{
-				html = intertagPattern_TagTag.Replace(html, "><");
-				html = intertagPattern_TagCustom.Replace(html, ">%%%~");
-				html = intertagPattern_CustomTag.Replace(html, "~%%%<");
-				html = intertagPattern_CustomCustom.Replace(html, "~%%%%%%~");
+				html = IntertagPatternTagTag.Replace(html, "><");
+				html = IntertagPatternTagCustom.Replace(html, ">%%%~");
+				html = IntertagPatternCustomTag.Replace(html, "~%%%<");
+				html = IntertagPatternCustomCustom.Replace(html, "~%%%%%%~");
 			}
 			return html;
 		}
 
-		private string removeComments(string html)
+		private string RemoveComments(string html)
 		{
 			//remove comments
 			if (_removeComments)
 			{
-				html = commentPattern.Replace(html, "");
+				html = CommentPattern.Replace(html, "");
 			}
 			return html;
 		}
 
-		private string simpleDoctype(string html)
+		private string SimpleDoctype(string html)
 		{
 			//simplify doctype
 			if (_simpleDoctype)
 			{
-				html = doctypePattern.Replace(html, "<!DOCTYPE html>");
+				html = DoctypePattern.Replace(html, "<!DOCTYPE html>");
 			}
 			return html;
 		}
 
-		private string removeScriptAttributes(string html)
+		private string RemoveScriptAttributes(string html)
 		{
-
 			if (_removeScriptAttributes)
 			{
 				//remove type from script tags
-				html = jsTypeAttrPattern.Replace(html, "$1$3");
+				html = JsTypeAttrPattern.Replace(html, "$1$3");
 
 				//remove language from script tags
-				html = jsLangAttrPattern.Replace(html, "$1$3");
+				html = JsLangAttrPattern.Replace(html, "$1$3");
 			}
 			return html;
 		}
 
-		private string removeStyleAttributes(string html)
+		private string RemoveStyleAttributes(string html)
 		{
 			//remove type from style tags
 			if (_removeStyleAttributes)
 			{
-				html = styleTypeAttrPattern.Replace(html, "$1$3");
+				html = StyleTypeAttrPattern.Replace(html, "$1$3");
 			}
 			return html;
 		}
 
-		private string removeLinkAttributes(string html)
+		private string RemoveLinkAttributes(string html)
 		{
 			//remove type from link tags with rel=stylesheet
 			if (_removeLinkAttributes)
 			{
-				var matcher = linkTypeAttrPattern.Matches(html);
+				var matcher = LinkTypeAttrPattern.Matches(html);
 				var sb = new StringBuilder();
 				var lastValue = 0;
 
 				foreach (Match match in matcher)
 				{
 					//if rel=stylesheet
-					if (matches(linkRelAttrPattern, match.Groups[0].Value))
+					if (Matches(LinkRelAttrPattern, match.Groups[0].Value))
 					{
 						sb.Append(html.Substring(lastValue, match.Index - lastValue));
 						//matcher.appendReplacement(sb, "$1$3");
@@ -1217,49 +1201,49 @@ namespace HtmlCompressor.Core.Internal
 			return html;
 		}
 
-		private string removeFormAttributes(string html)
+		private string RemoveFormAttributes(string html)
 		{
 			//remove method from form tags
 			if (_removeFormAttributes)
 			{
-				html = formMethodAttrPattern.Replace(html, "$1$3");
+				html = FormMethodAttrPattern.Replace(html, "$1$3");
 			}
 			return html;
 		}
 
-		private string removeInputAttributes(string html)
+		private string RemoveInputAttributes(string html)
 		{
 			//remove type from input tags
 			if (_removeInputAttributes)
 			{
-				html = inputTypeAttrPattern.Replace(html, "$1$3");
+				html = InputTypeAttrPattern.Replace(html, "$1$3");
 			}
 			return html;
 		}
 
-		private string simpleBooleanAttributes(string html)
+		private string SimpleBooleanAttributes(string html)
 		{
 			//simplify bool attributes
 			if (_simpleBooleanAttributes)
 			{
-				html = booleanAttrPattern.Replace(html, "$1$2$4");
+				html = BooleanAttrPattern.Replace(html, "$1$2$4");
 			}
 			return html;
 		}
 
-		private string removeHttpProtocol(string html)
+		private string RemoveHttpProtocol(string html)
 		{
 			//remove http protocol from tag attributes
 			if (_removeHttpProtocol)
 			{
-				var matcher = httpProtocolPattern.Matches(html);
+				var matcher = HttpProtocolPattern.Matches(html);
 				var sb = new StringBuilder();
 				var lastValue = 0;
 
 				foreach (Match match in matcher)
 				{
 					//if rel!=external
-					if (!matches(relExternalPattern, match.Groups[0].Value))
+					if (!Matches(RelExternalPattern, match.Groups[0].Value))
 					{
 						sb.Append(html.Substring(lastValue, match.Index - lastValue));
 						//matcher.appendReplacement(sb, "$1$2");
@@ -1285,19 +1269,19 @@ namespace HtmlCompressor.Core.Internal
 			return html;
 		}
 
-		private string removeHttpsProtocol(string html)
+		private string RemoveHttpsProtocol(string html)
 		{
 			//remove https protocol from tag attributes
 			if (_removeHttpsProtocol)
 			{
-				var matcher = httpsProtocolPattern.Matches(html);
+				var matcher = HttpsProtocolPattern.Matches(html);
 				var sb = new StringBuilder();
 				var lastValue = 0;
 
 				foreach (Match match in matcher)
 				{
 					//if rel!=external
-					if (!matches(relExternalPattern, match.Groups[0].Value))
+					if (!Matches(RelExternalPattern, match.Groups[0].Value))
 					{
 						sb.Append(html.Substring(lastValue, match.Index - lastValue));
 						//matcher.appendReplacement(sb, "$1$2");
@@ -1323,7 +1307,7 @@ namespace HtmlCompressor.Core.Internal
 			return html;
 		}
 
-		private static bool matches(Regex regex, string value)
+		private static bool Matches(Regex regex, string value)
 		{
 			// http://stackoverflow.com/questions/4450045/difference-between-matches-and-find-in-java-regex
 
@@ -1331,227 +1315,221 @@ namespace HtmlCompressor.Core.Internal
 			return cloneRegex.IsMatch(value);
 		}
 
-		private void processPreservedBlocks(List<string> preBlocks, List<string> taBlocks, List<string> scriptBlocks,
-											List<string> styleBlocks, List<string> eventBlocks, List<string> condCommentBlocks,
-											List<string> skipBlocks, List<string> lineBreakBlocks,
-											List<List<string>> userBlocks)
+		private void ProcessPreservedBlocks(List<string> preBlocks, List<string> taBlocks, List<string> scriptBlocks,
+			List<string> styleBlocks, List<string> eventBlocks, List<string> condCommentBlocks,
+			List<string> skipBlocks, List<string> lineBreakBlocks,
+			List<List<string>> userBlocks)
 		{
-			processPreBlocks(preBlocks);
-			processTextAreaBlocks(taBlocks);
-			processScriptBlocks(scriptBlocks);
-			processStyleBlocks(styleBlocks);
-			processEventBlocks(eventBlocks);
-			processCondCommentBlocks(condCommentBlocks);
-			processSkipBlocks(skipBlocks);
-			processUserBlocks(userBlocks);
-			processLineBreakBlocks(lineBreakBlocks);
+			ProcessPreBlocks(preBlocks);
+			ProcessTextAreaBlocks(taBlocks);
+			ProcessScriptBlocks(scriptBlocks);
+			ProcessStyleBlocks(styleBlocks);
+			ProcessEventBlocks(eventBlocks);
+			ProcessCondCommentBlocks(condCommentBlocks);
+			ProcessSkipBlocks(skipBlocks);
+			ProcessUserBlocks(userBlocks);
+			ProcessLineBreakBlocks(lineBreakBlocks);
 		}
 
-		private void processPreBlocks(List<string> preBlocks)
+		private void ProcessPreBlocks(List<string> preBlocks)
 		{
-			if (generateStatistics)
+			if (_generateStatistics)
 			{
-				foreach (string block in preBlocks)
+				foreach (var block in preBlocks)
 				{
-					statistics.setPreservedSize(statistics.getPreservedSize() + block.Length);
+					_statistics.SetPreservedSize(_statistics.GetPreservedSize() + block.Length);
 				}
 			}
 		}
 
-		private void processTextAreaBlocks(List<string> taBlocks)
+		private void ProcessTextAreaBlocks(List<string> taBlocks)
 		{
-			if (generateStatistics)
+			if (_generateStatistics)
 			{
-				foreach (string block in taBlocks)
+				foreach (var block in taBlocks)
 				{
-					statistics.setPreservedSize(statistics.getPreservedSize() + block.Length);
+					_statistics.SetPreservedSize(_statistics.GetPreservedSize() + block.Length);
 				}
 			}
 		}
 
-		private void processCondCommentBlocks(List<string> condCommentBlocks)
+		private void ProcessCondCommentBlocks(List<string> condCommentBlocks)
 		{
-			if (generateStatistics)
+			if (_generateStatistics)
 			{
-				foreach (string block in condCommentBlocks)
+				foreach (var block in condCommentBlocks)
 				{
-					statistics.setPreservedSize(statistics.getPreservedSize() + block.Length);
+					_statistics.SetPreservedSize(_statistics.GetPreservedSize() + block.Length);
 				}
 			}
 		}
 
-		private void processSkipBlocks(List<string> skipBlocks)
+		private void ProcessSkipBlocks(List<string> skipBlocks)
 		{
-			if (generateStatistics)
+			if (_generateStatistics)
 			{
-				foreach (string block in skipBlocks)
+				foreach (var block in skipBlocks)
 				{
-					statistics.setPreservedSize(statistics.getPreservedSize() + block.Length);
+					_statistics.SetPreservedSize(_statistics.GetPreservedSize() + block.Length);
 				}
 			}
 		}
 
-		private void processLineBreakBlocks(List<string> lineBreakBlocks)
+		private void ProcessLineBreakBlocks(List<string> lineBreakBlocks)
 		{
-			if (generateStatistics)
+			if (_generateStatistics)
 			{
-				foreach (string block in lineBreakBlocks)
+				foreach (var block in lineBreakBlocks)
 				{
-					statistics.setPreservedSize(statistics.getPreservedSize() + block.Length);
+					_statistics.SetPreservedSize(_statistics.GetPreservedSize() + block.Length);
 				}
 			}
 		}
 
-		private void processUserBlocks(List<List<string>> userBlocks)
+		private void ProcessUserBlocks(List<List<string>> userBlocks)
 		{
-			if (generateStatistics)
+			if (_generateStatistics)
 			{
-				foreach (List<string> blockList in userBlocks)
+				foreach (var blockList in userBlocks)
 				{
-					foreach (string block in blockList)
+					foreach (var block in blockList)
 					{
-						statistics.setPreservedSize(statistics.getPreservedSize() + block.Length);
+						_statistics.SetPreservedSize(_statistics.GetPreservedSize() + block.Length);
 					}
 				}
 			}
 		}
 
-		private void processEventBlocks(List<string> eventBlocks)
+		private void ProcessEventBlocks(List<string> eventBlocks)
 		{
-
-			if (generateStatistics)
+			if (_generateStatistics)
 			{
-				foreach (string block in eventBlocks)
+				foreach (var block in eventBlocks)
 				{
-					statistics.getOriginalMetrics()
-							  .setInlineEventSize(statistics.getOriginalMetrics().getInlineEventSize() + block.Length);
+					_statistics.GetOriginalMetrics()
+						.SetInlineEventSize(_statistics.GetOriginalMetrics().GetInlineEventSize() + block.Length);
 				}
 			}
 
 			if (_removeJavaScriptProtocol)
 			{
-				for (int i = 0; i < eventBlocks.Count; i++)
+				for (var i = 0; i < eventBlocks.Count; i++)
 				{
-					eventBlocks[i] = removeJavaScriptProtocol(eventBlocks[i]);
+					eventBlocks[i] = RemoveJavaScriptProtocol(eventBlocks[i]);
 				}
 			}
-			else if (generateStatistics)
+			else if (_generateStatistics)
 			{
-				foreach (string block in eventBlocks)
+				foreach (var block in eventBlocks)
 				{
-					statistics.setPreservedSize(statistics.getPreservedSize() + block.Length);
+					_statistics.SetPreservedSize(_statistics.GetPreservedSize() + block.Length);
 				}
 			}
 
-			if (generateStatistics)
+			if (_generateStatistics)
 			{
-				foreach (string block in eventBlocks)
+				foreach (var block in eventBlocks)
 				{
-					statistics.getCompressedMetrics()
-							  .setInlineEventSize(statistics.getCompressedMetrics().getInlineEventSize() + block.Length);
+					_statistics.GetCompressedMetrics()
+						.SetInlineEventSize(_statistics.GetCompressedMetrics().GetInlineEventSize() + block.Length);
 				}
 			}
 		}
 
-		private string removeJavaScriptProtocol(string source)
+		private string RemoveJavaScriptProtocol(string source)
 		{
 			//remove javascript: from inline events
-			string result = source;
-
-			result = eventJsProtocolPattern.Replace(source, @"$1", 1);
+			var result = EventJsProtocolPattern.Replace(source, @"$1", 1);
 			//var matcher = eventJsProtocolPattern.Match(source);
 			//if (matcher.Success)
 			//{
 			//    result = matcher.replaceFirst("$1");
 			//}
 
-			if (generateStatistics)
+			if (_generateStatistics)
 			{
-				statistics.setPreservedSize(statistics.getPreservedSize() + result.Length);
+				_statistics.SetPreservedSize(_statistics.GetPreservedSize() + result.Length);
 			}
 
 			return result;
 		}
 
-		private void processScriptBlocks(List<string> scriptBlocks)
+		private void ProcessScriptBlocks(List<string> scriptBlocks)
 		{
-
-			if (generateStatistics)
+			if (_generateStatistics)
 			{
-				foreach (string block in scriptBlocks)
+				foreach (var block in scriptBlocks)
 				{
-					statistics.getOriginalMetrics()
-							  .setInlineScriptSize(statistics.getOriginalMetrics().getInlineScriptSize() + block.Length);
+					_statistics.GetOriginalMetrics()
+						.SetInlineScriptSize(_statistics.GetOriginalMetrics().GetInlineScriptSize() + block.Length);
 				}
 			}
 
 			if (_compressJavaScript)
 			{
-				for (int i = 0; i < scriptBlocks.Count; i++)
+				for (var i = 0; i < scriptBlocks.Count; i++)
 				{
-					scriptBlocks[i] = compressJavaScript(scriptBlocks[i]);
+					scriptBlocks[i] = CompressJavaScript(scriptBlocks[i]);
 				}
 			}
-			else if (generateStatistics)
+			else if (_generateStatistics)
 			{
-				foreach (string block in scriptBlocks)
+				foreach (var block in scriptBlocks)
 				{
-					statistics.setPreservedSize(statistics.getPreservedSize() + block.Length);
+					_statistics.SetPreservedSize(_statistics.GetPreservedSize() + block.Length);
 				}
 			}
 
-			if (generateStatistics)
+			if (_generateStatistics)
 			{
-				foreach (string block in scriptBlocks)
+				foreach (var block in scriptBlocks)
 				{
-					statistics.getCompressedMetrics()
-							  .setInlineScriptSize(statistics.getCompressedMetrics().getInlineScriptSize() + block.Length);
+					_statistics.GetCompressedMetrics()
+						.SetInlineScriptSize(_statistics.GetCompressedMetrics().GetInlineScriptSize() + block.Length);
 				}
 			}
 		}
 
-		private void processStyleBlocks(List<string> styleBlocks)
+		private void ProcessStyleBlocks(List<string> styleBlocks)
 		{
-
-			if (generateStatistics)
+			if (_generateStatistics)
 			{
-				foreach (string block in styleBlocks)
+				foreach (var block in styleBlocks)
 				{
-					statistics.getOriginalMetrics()
-							  .setInlineStyleSize(statistics.getOriginalMetrics().getInlineStyleSize() + block.Length);
+					_statistics.GetOriginalMetrics()
+						.SetInlineStyleSize(_statistics.GetOriginalMetrics().GetInlineStyleSize() + block.Length);
 				}
 			}
 
 			if (_compressCss)
 			{
-				for (int i = 0; i < styleBlocks.Count; i++)
+				for (var i = 0; i < styleBlocks.Count; i++)
 				{
-					styleBlocks[i] = compressCssStyles(styleBlocks[i]);
+					styleBlocks[i] = CompressCssStyles(styleBlocks[i]);
 				}
 			}
-			else if (generateStatistics)
+			else if (_generateStatistics)
 			{
-				foreach (string block in styleBlocks)
+				foreach (var block in styleBlocks)
 				{
-					statistics.setPreservedSize(statistics.getPreservedSize() + block.Length);
+					_statistics.SetPreservedSize(_statistics.GetPreservedSize() + block.Length);
 				}
 			}
 
-			if (generateStatistics)
+			if (_generateStatistics)
 			{
-				foreach (string block in styleBlocks)
+				foreach (var block in styleBlocks)
 				{
-					statistics.getCompressedMetrics()
-							  .setInlineStyleSize(statistics.getCompressedMetrics().getInlineStyleSize() + block.Length);
+					_statistics.GetCompressedMetrics()
+						.SetInlineStyleSize(_statistics.GetCompressedMetrics().GetInlineStyleSize() + block.Length);
 				}
 			}
 		}
 
-		private string compressJavaScript(string source)
+		private string CompressJavaScript(string source)
 		{
-
 			//set default javascript compressor
-			if (javaScriptCompressor == null)
+			if (_javaScriptCompressor == null)
 			{
 				return source;
 				//YuiJavaScriptCompressor yuiJsCompressor = new YuiJavaScriptCompressor();
@@ -1569,22 +1547,22 @@ namespace HtmlCompressor.Core.Internal
 			}
 
 			//detect CDATA wrapper
-			bool scriptCdataWrapper = false;
-			bool cdataWrapper = false;
-			var matcher = scriptCdataPattern.Match(source);
+			var scriptCdataWrapper = false;
+			var cdataWrapper = false;
+			var matcher = ScriptCdataPattern.Match(source);
 			if (matcher.Success)
 			{
 				scriptCdataWrapper = true;
 				source = matcher.Groups[1].Value;
 			}
-			else if (cdataPattern.Match(source).Success)
+			else if (CdataPattern.Match(source).Success)
 			{
 				cdataWrapper = true;
 				source = matcher.Groups[1].Value;
 			}
-			
-			string result = javaScriptCompressor.compress(source);
-			
+
+			var result = _javaScriptCompressor.Compress(source);
+
 			if (scriptCdataWrapper)
 			{
 				result = string.Format("/*<![CDATA[*/{0}/*]]>*/", result);
@@ -1595,14 +1573,12 @@ namespace HtmlCompressor.Core.Internal
 			}
 
 			return result;
-
 		}
 
-		private string compressCssStyles(string source)
+		private string CompressCssStyles(string source)
 		{
-
 			//set default css compressor
-			if (cssCompressor == null)
+			if (_cssCompressor == null)
 			{
 				return source;
 				//YuiCssCompressor yuiCssCompressor = new YuiCssCompressor();
@@ -1612,15 +1588,15 @@ namespace HtmlCompressor.Core.Internal
 			}
 
 			//detect CDATA wrapper
-			bool cdataWrapper = false;
-			var matcher = cdataPattern.Match(source);
+			var cdataWrapper = false;
+			var matcher = CdataPattern.Match(source);
 			if (matcher.Success)
 			{
 				cdataWrapper = true;
 				source = matcher.Groups[1].Value;
 			}
 
-			string result = cssCompressor.compress(source);
+			var result = _cssCompressor.Compress(source);
 
 			if (cdataWrapper)
 			{
@@ -1628,31 +1604,30 @@ namespace HtmlCompressor.Core.Internal
 			}
 
 			return result;
-
 		}
 
-		private HtmlCompressor createCompressorClone()
+		private HtmlCompressor CreateCompressorClone()
 		{
 			var clone = new HtmlCompressor();
-			clone.setJavaScriptCompressor(javaScriptCompressor);
-			clone.setCssCompressor(cssCompressor);
-			clone.setRemoveComments(_removeComments);
-			clone.setRemoveMultiSpaces(_removeMultiSpaces);
-			clone.setRemoveIntertagSpaces(_removeIntertagSpaces);
-			clone.setRemoveQuotes(_removeQuotes);
-			clone.setCompressJavaScript(_compressJavaScript);
-			clone.setCompressCss(_compressCss);
-			clone.setSimpleDoctype(_simpleDoctype);
-			clone.setRemoveScriptAttributes(_removeScriptAttributes);
-			clone.setRemoveStyleAttributes(_removeStyleAttributes);
-			clone.setRemoveLinkAttributes(_removeLinkAttributes);
-			clone.setRemoveFormAttributes(_removeFormAttributes);
-			clone.setRemoveInputAttributes(_removeInputAttributes);
-			clone.setSimpleBooleanAttributes(_simpleBooleanAttributes);
-			clone.setRemoveJavaScriptProtocol(_removeJavaScriptProtocol);
-			clone.setRemoveHttpProtocol(_removeHttpProtocol);
-			clone.setRemoveHttpsProtocol(_removeHttpsProtocol);
-			clone.setPreservePatterns(preservePatterns);
+			clone.SetJavaScriptCompressor(_javaScriptCompressor);
+			clone.SetCssCompressor(_cssCompressor);
+			clone.SetRemoveComments(_removeComments);
+			clone.SetRemoveMultiSpaces(_removeMultiSpaces);
+			clone.SetRemoveIntertagSpaces(_removeIntertagSpaces);
+			clone.SetRemoveQuotes(_removeQuotes);
+			clone.SetCompressJavaScript(_compressJavaScript);
+			clone.SetCompressCss(_compressCss);
+			clone.SetSimpleDoctype(_simpleDoctype);
+			clone.SetRemoveScriptAttributes(_removeScriptAttributes);
+			clone.SetRemoveStyleAttributes(_removeStyleAttributes);
+			clone.SetRemoveLinkAttributes(_removeLinkAttributes);
+			clone.SetRemoveFormAttributes(_removeFormAttributes);
+			clone.SetRemoveInputAttributes(_removeInputAttributes);
+			clone.SetSimpleBooleanAttributes(_simpleBooleanAttributes);
+			clone.SetRemoveJavaScriptProtocol(_removeJavaScriptProtocol);
+			clone.SetRemoveHttpProtocol(_removeHttpProtocol);
+			clone.SetRemoveHttpsProtocol(_removeHttpsProtocol);
+			clone.SetPreservePatterns(_preservePatterns);
 			//clone.setYuiJsNoMunge(yuiJsNoMunge);
 			//clone.setYuiJsPreserveAllSemiColons(yuiJsPreserveAllSemiColons);
 			//clone.setYuiJsDisableOptimizations(yuiJsDisableOptimizations);
@@ -1661,7 +1636,6 @@ namespace HtmlCompressor.Core.Internal
 			//clone.setYuiErrorReporter(yuiErrorReporter);
 
 			return clone;
-
 		}
 
 		/**
@@ -1670,7 +1644,7 @@ namespace HtmlCompressor.Core.Internal
 		 * @return current state of JavaScript compression.
 		 */
 
-		public bool isCompressJavaScript()
+		public bool IsCompressJavaScript()
 		{
 			return _compressJavaScript;
 		}
@@ -1692,9 +1666,9 @@ namespace HtmlCompressor.Core.Internal
 		 * 
 		 */
 
-		public void setCompressJavaScript(bool compressJavaScript)
+		public void SetCompressJavaScript(bool compressJavaScript)
 		{
-			this._compressJavaScript = compressJavaScript;
+			_compressJavaScript = compressJavaScript;
 		}
 
 		/**
@@ -1703,7 +1677,7 @@ namespace HtmlCompressor.Core.Internal
 		 * @return current state of CSS compression.
 		 */
 
-		public bool isCompressCss()
+		public bool IsCompressCss()
 		{
 			return _compressCss;
 		}
@@ -1725,132 +1699,11 @@ namespace HtmlCompressor.Core.Internal
 		 * 
 		 */
 
-		public void setCompressCss(bool compressCss)
+		public void SetCompressCss(bool compressCss)
 		{
-			this._compressCss = compressCss;
+			_compressCss = compressCss;
 		}
 
-		///**
-		// * Returns <code>true</code> if Yahoo YUI ICompressor
-		// * will only minify javascript without obfuscating local symbols. 
-		// * This corresponds to <code>--nomunge</code> command line option.  
-		// *   
-		// * @return <code>nomunge</code> parameter value used for JavaScript compression.
-		// * 
-		// * @see <a href="http://developer.yahoo.com/yui/compressor/">Yahoo YUI ICompressor</a>
-		// */
-		//public bool isYuiJsNoMunge()
-		//{
-		//    return yuiJsNoMunge;
-		//}
-
-		///**
-		// * Tells Yahoo YUI ICompressor to only minify javascript without obfuscating 
-		// * local symbols. This corresponds to <code>--nomunge</code> command line option. 
-		// * This option has effect only if JavaScript compression is enabled. 
-		// * Default is <code>false</code>.
-		// * 
-		// * @param yuiJsNoMunge set <code>true</code> to enable <code>nomunge</code> mode
-		// * 
-		// * @see <a href="http://developer.yahoo.com/yui/compressor/">Yahoo YUI ICompressor</a>
-		// */
-		//public void setYuiJsNoMunge(bool yuiJsNoMunge)
-		//{
-		//    this.yuiJsNoMunge = yuiJsNoMunge;
-		//}
-
-		///**
-		// * Returns <code>true</code> if Yahoo YUI ICompressor
-		// * will preserve unnecessary semicolons during JavaScript compression. 
-		// * This corresponds to <code>--preserve-semi</code> command line option.
-		// *   
-		// * @return <code>preserve-semi</code> parameter value used for JavaScript compression.
-		// * 
-		// * @see <a href="http://developer.yahoo.com/yui/compressor/">Yahoo YUI ICompressor</a>
-		// */
-		//public bool isYuiJsPreserveAllSemiColons()
-		//{
-		//    return yuiJsPreserveAllSemiColons;
-		//}
-
-		///**
-		// * Tells Yahoo YUI ICompressor to preserve unnecessary semicolons 
-		// * during JavaScript compression. This corresponds to 
-		// * <code>--preserve-semi</code> command line option. 
-		// * This option has effect only if JavaScript compression is enabled.
-		// * Default is <code>false</code>.
-		// * 
-		// * @param yuiJsPreserveAllSemiColons set <code>true<code> to enable <code>preserve-semi</code> mode
-		// * 
-		// * @see <a href="http://developer.yahoo.com/yui/compressor/">Yahoo YUI ICompressor</a>
-		// */
-		//public void setYuiJsPreserveAllSemiColons(bool yuiJsPreserveAllSemiColons)
-		//{
-		//    this.yuiJsPreserveAllSemiColons = yuiJsPreserveAllSemiColons;
-		//}
-
-		///**
-		// * Returns <code>true</code> if Yahoo YUI ICompressor
-		// * will disable all the built-in micro optimizations during JavaScript compression. 
-		// * This corresponds to <code>--disable-optimizations</code> command line option.
-		// *   
-		// * @return <code>disable-optimizations</code> parameter value used for JavaScript compression.
-		// * 
-		// * @see <a href="http://developer.yahoo.com/yui/compressor/">Yahoo YUI ICompressor</a>
-		// */
-		//public bool isYuiJsDisableOptimizations()
-		//{
-		//    return yuiJsDisableOptimizations;
-		//}
-
-		///**
-		// * Tells Yahoo YUI ICompressor to disable all the built-in micro optimizations
-		// * during JavaScript compression. This corresponds to 
-		// * <code>--disable-optimizations</code> command line option. 
-		// * This option has effect only if JavaScript compression is enabled.
-		// * Default is <code>false</code>.
-		// * 
-		// * @param yuiJsDisableOptimizations set <code>true<code> to enable 
-		// * <code>disable-optimizations</code> mode
-		// * 
-		// * @see <a href="http://developer.yahoo.com/yui/compressor/">Yahoo YUI ICompressor</a>
-		// */
-		//public void setYuiJsDisableOptimizations(bool yuiJsDisableOptimizations)
-		//{
-		//    this.yuiJsDisableOptimizations = yuiJsDisableOptimizations;
-		//}
-
-		///**
-		// * Returns number of symbols per line Yahoo YUI ICompressor
-		// * will use during JavaScript compression. 
-		// * This corresponds to <code>--line-break</code> command line option.
-		// *   
-		// * @return <code>line-break</code> parameter value used for JavaScript compression.
-		// * 
-		// * @see <a href="http://developer.yahoo.com/yui/compressor/">Yahoo YUI ICompressor</a>
-		// */
-		//public int getYuiJsLineBreak()
-		//{
-		//    return yuiJsLineBreak;
-		//}
-
-		///**
-		// * Tells Yahoo YUI ICompressor to break lines after the specified number of symbols 
-		// * during JavaScript compression. This corresponds to 
-		// * <code>--line-break</code> command line option. 
-		// * This option has effect only if JavaScript compression is enabled.
-		// * Default is <code>-1</code> to disable line breaks.
-		// * 
-		// * @param yuiJsLineBreak set number of symbols per line
-		// * 
-		// * @see <a href="http://developer.yahoo.com/yui/compressor/">Yahoo YUI ICompressor</a>
-		// */
-		//public void setYuiJsLineBreak(int yuiJsLineBreak)
-		//{
-		//    this.yuiJsLineBreak = yuiJsLineBreak;
-		//}
-
-		///**
 		// * Returns number of symbols per line Yahoo YUI ICompressor
 		// * will use during CSS compression. 
 		// * This corresponds to <code>--line-break</code> command line option.
@@ -1863,8 +1716,16 @@ namespace HtmlCompressor.Core.Internal
 		//{
 		//    return yuiCssLineBreak;
 		//}
-
-		///**
+		/// **
+		/// **
+		/// **
+		/// **
+		/// **
+		/// **
+		/// **
+		/// **
+		/// **
+		/// **
 		// * Tells Yahoo YUI ICompressor to break lines after the specified number of symbols 
 		// * during CSS compression. This corresponds to 
 		// * <code>--line-break</code> command line option. 
@@ -1877,15 +1738,14 @@ namespace HtmlCompressor.Core.Internal
 		// */
 		//public void setYuiCssLineBreak(int yuiCssLineBreak)
 		//{
-		//    this.yuiCssLineBreak = yuiCssLineBreak;
+		//    yuiCssLineBreak = yuiCssLineBreak;
 		//}
-
 		/**
 		 * Returns <code>true</code> if all unnecessary quotes will be removed 
 		 * from tag attributes. 
 		 *   
 		 */
-		public bool isRemoveQuotes()
+		public bool IsRemoveQuotes()
 		{
 			return _removeQuotes;
 		}
@@ -1902,9 +1762,9 @@ namespace HtmlCompressor.Core.Internal
 		 * @param removeQuotes set <code>true</code> to remove unnecessary quotes from tag attributes
 		 */
 
-		public void setRemoveQuotes(bool removeQuotes)
+		public void SetRemoveQuotes(bool removeQuotes)
 		{
-			this._removeQuotes = removeQuotes;
+			_removeQuotes = removeQuotes;
 		}
 
 		/**
@@ -1913,9 +1773,9 @@ namespace HtmlCompressor.Core.Internal
 		 * @return <code>true</code> if compression is enabled.
 		 */
 
-		public bool isEnabled()
+		public bool IsEnabled()
 		{
-			return enabled;
+			return _enabled;
 		}
 
 		/**
@@ -1925,9 +1785,9 @@ namespace HtmlCompressor.Core.Internal
 		 * @param enabled set <code>false</code> to bypass all compression
 		 */
 
-		public void setEnabled(bool enabled)
+		public void SetEnabled(bool enabled)
 		{
-			this.enabled = enabled;
+			_enabled = enabled;
 		}
 
 		/**
@@ -1936,7 +1796,7 @@ namespace HtmlCompressor.Core.Internal
 		 * @return <code>true</code> if all HTML comments will be removed
 		 */
 
-		public bool isRemoveComments()
+		public bool IsRemoveComments()
 		{
 			return _removeComments;
 		}
@@ -1948,9 +1808,9 @@ namespace HtmlCompressor.Core.Internal
 		 * @param removeComments set <code>true</code> to remove all HTML comments
 		 */
 
-		public void setRemoveComments(bool removeComments)
+		public void SetRemoveComments(bool removeComments)
 		{
-			this._removeComments = removeComments;
+			_removeComments = removeComments;
 		}
 
 		/**
@@ -1959,7 +1819,7 @@ namespace HtmlCompressor.Core.Internal
 		 * @return <code>true</code> if all multiple whitespace characters will be replaced with single spaces.
 		 */
 
-		public bool isRemoveMultiSpaces()
+		public bool IsRemoveMultiSpaces()
 		{
 			return _removeMultiSpaces;
 		}
@@ -1972,9 +1832,9 @@ namespace HtmlCompressor.Core.Internal
 		 * will single spaces.
 		 */
 
-		public void setRemoveMultiSpaces(bool removeMultiSpaces)
+		public void SetRemoveMultiSpaces(bool removeMultiSpaces)
 		{
-			this._removeMultiSpaces = removeMultiSpaces;
+			_removeMultiSpaces = removeMultiSpaces;
 		}
 
 		/**
@@ -1983,7 +1843,7 @@ namespace HtmlCompressor.Core.Internal
 		 * @return <code>true</code> if all inter-tag whitespace characters will be removed.
 		 */
 
-		public bool isRemoveIntertagSpaces()
+		public bool IsRemoveIntertagSpaces()
 		{
 			return _removeIntertagSpaces;
 		}
@@ -1999,9 +1859,9 @@ namespace HtmlCompressor.Core.Internal
 		 * @param removeIntertagSpaces set <code>true</code> to remove all inter-tag whitespace characters
 		 */
 
-		public void setRemoveIntertagSpaces(bool removeIntertagSpaces)
+		public void SetRemoveIntertagSpaces(bool removeIntertagSpaces)
 		{
-			this._removeIntertagSpaces = removeIntertagSpaces;
+			_removeIntertagSpaces = removeIntertagSpaces;
 		}
 
 		/**
@@ -2010,9 +1870,9 @@ namespace HtmlCompressor.Core.Internal
 		 * @return list of <code>Regex</code> objects defining rules for preserving block rules
 		 */
 
-		public List<Regex> getPreservePatterns()
+		public List<Regex> GetPreservePatterns()
 		{
-			return preservePatterns;
+			return _preservePatterns;
 		}
 
 		/**
@@ -2032,12 +1892,11 @@ namespace HtmlCompressor.Core.Internal
 		 * used to skip matched blocks during compression  
 		 */
 
-		public void setPreservePatterns(List<Regex> preservePatterns)
+		public void SetPreservePatterns(List<Regex> preservePatterns)
 		{
-			this.preservePatterns = preservePatterns;
+			_preservePatterns = preservePatterns;
 		}
 
-		///**
 		// * Returns <code>ErrorReporter</code> used by YUI ICompressor to log error messages 
 		// * during JavasSript compression 
 		// * 
@@ -2051,8 +1910,8 @@ namespace HtmlCompressor.Core.Internal
 		//{
 		//    return yuiErrorReporter;
 		//}
-
-		///**
+		/// **
+		/// **
 		// * Sets <code>ErrorReporter</code> that YUI ICompressor will use for reporting errors during 
 		// * JavaScript compression. If no <code>ErrorReporter</code> was provided 
 		// * {@link YuiJavaScriptCompressor.DefaultErrorReporter} will be used 
@@ -2066,9 +1925,8 @@ namespace HtmlCompressor.Core.Internal
 		// */
 		//public void setYuiErrorReporter(ErrorReporter yuiErrorReporter)
 		//{
-		//    this.yuiErrorReporter = yuiErrorReporter;
+		//    yuiErrorReporter = yuiErrorReporter;
 		//}
-
 		/**
 		 * Returns JavaScript compressor implementation that will be used 
 		 * to compress inline JavaScript in HTML.
@@ -2081,9 +1939,9 @@ namespace HtmlCompressor.Core.Internal
 		 * @see <a href="http://developer.yahoo.com/yui/compressor/">Yahoo YUI ICompressor</a>
 		 * @see <a href="http://code.google.com/closure/compiler/">Google Closure Compiler</a>
 		 */
-		public ICompressor getJavaScriptCompressor()
+		public ICompressor GetJavaScriptCompressor()
 		{
-			return javaScriptCompressor;
+			return _javaScriptCompressor;
 		}
 
 		/**
@@ -2105,9 +1963,9 @@ namespace HtmlCompressor.Core.Internal
 		 * @see <a href="http://code.google.com/closure/compiler/">Google Closure Compiler</a>
 		 */
 
-		public void setJavaScriptCompressor(ICompressor javaScriptCompressor)
+		public void SetJavaScriptCompressor(ICompressor javaScriptCompressor)
 		{
-			this.javaScriptCompressor = javaScriptCompressor;
+			_javaScriptCompressor = javaScriptCompressor;
 		}
 
 		/**
@@ -2121,9 +1979,9 @@ namespace HtmlCompressor.Core.Internal
 		 * @see <a href="http://developer.yahoo.com/yui/compressor/">Yahoo YUI ICompressor</a>
 		 */
 
-		public ICompressor getCssCompressor()
+		public ICompressor GetCssCompressor()
 		{
-			return cssCompressor;
+			return _cssCompressor;
 		}
 
 		/**
@@ -2142,9 +2000,9 @@ namespace HtmlCompressor.Core.Internal
 		 * @see <a href="http://developer.yahoo.com/yui/compressor/">Yahoo YUI ICompressor</a>
 		 */
 
-		public void setCssCompressor(ICompressor cssCompressor)
+		public void SetCssCompressor(ICompressor cssCompressor)
 		{
-			this.cssCompressor = cssCompressor;
+			_cssCompressor = cssCompressor;
 		}
 
 		/**
@@ -2153,7 +2011,7 @@ namespace HtmlCompressor.Core.Internal
 		 * @return <code>true</code> if existing DOCTYPE declaration will be replaced with simple <code><!DOCTYPE html></code> declaration.
 		 */
 
-		public bool isSimpleDoctype()
+		public bool IsSimpleDoctype()
 		{
 			return _simpleDoctype;
 		}
@@ -2165,9 +2023,9 @@ namespace HtmlCompressor.Core.Internal
 		 * @param simpleDoctype set <code>true</code> to replace existing DOCTYPE declaration with <code>&lt;!DOCTYPE html></code>
 		 */
 
-		public void setSimpleDoctype(bool simpleDoctype)
+		public void SetSimpleDoctype(bool simpleDoctype)
 		{
-			this._simpleDoctype = simpleDoctype;
+			_simpleDoctype = simpleDoctype;
 		}
 
 		/**
@@ -2176,7 +2034,7 @@ namespace HtmlCompressor.Core.Internal
 		 * @return <code>true</code> if unnecessary attributes wil be removed from <code>&lt;script></code> tags
 		 */
 
-		public bool isRemoveScriptAttributes()
+		public bool IsRemoveScriptAttributes()
 		{
 			return _removeScriptAttributes;
 		}
@@ -2194,9 +2052,9 @@ namespace HtmlCompressor.Core.Internal
 		 * @param removeScriptAttributes set <code>true</code> to remove unnecessary attributes from <code>&lt;script></code> tags 
 		 */
 
-		public void setRemoveScriptAttributes(bool removeScriptAttributes)
+		public void SetRemoveScriptAttributes(bool removeScriptAttributes)
 		{
-			this._removeScriptAttributes = removeScriptAttributes;
+			_removeScriptAttributes = removeScriptAttributes;
 		}
 
 		/**
@@ -2205,7 +2063,7 @@ namespace HtmlCompressor.Core.Internal
 		 * @return <code>true</code> if <code>type="text/style"</code> attributes will be removed from <code>&lt;style></code> tags
 		 */
 
-		public bool isRemoveStyleAttributes()
+		public bool IsRemoveStyleAttributes()
 		{
 			return _removeStyleAttributes;
 		}
@@ -2216,9 +2074,9 @@ namespace HtmlCompressor.Core.Internal
 		 * @param removeStyleAttributes set <code>true</code> to remove <code>type="text/style"</code> attributes from <code>&lt;style></code> tags
 		 */
 
-		public void setRemoveStyleAttributes(bool removeStyleAttributes)
+		public void SetRemoveStyleAttributes(bool removeStyleAttributes)
 		{
-			this._removeStyleAttributes = removeStyleAttributes;
+			_removeStyleAttributes = removeStyleAttributes;
 		}
 
 		/**
@@ -2227,7 +2085,7 @@ namespace HtmlCompressor.Core.Internal
 		 * @return <code>true</code> if unnecessary attributes will be removed from <code>&lt;link></code> tags
 		 */
 
-		public bool isRemoveLinkAttributes()
+		public bool IsRemoveLinkAttributes()
 		{
 			return _removeLinkAttributes;
 		}
@@ -2244,9 +2102,9 @@ namespace HtmlCompressor.Core.Internal
 		 * @param removeLinkAttributes set <code>true</code> to remove unnecessary attributes from <code>&lt;link></code> tags
 		 */
 
-		public void setRemoveLinkAttributes(bool removeLinkAttributes)
+		public void SetRemoveLinkAttributes(bool removeLinkAttributes)
 		{
-			this._removeLinkAttributes = removeLinkAttributes;
+			_removeLinkAttributes = removeLinkAttributes;
 		}
 
 		/**
@@ -2255,7 +2113,7 @@ namespace HtmlCompressor.Core.Internal
 		 * @return <code>true</code> if <code>method="get"</code> attributes will be removed from <code>&lt;form></code> tags
 		 */
 
-		public bool isRemoveFormAttributes()
+		public bool IsRemoveFormAttributes()
 		{
 			return _removeFormAttributes;
 		}
@@ -2266,9 +2124,9 @@ namespace HtmlCompressor.Core.Internal
 		 * @param removeFormAttributes set <code>true</code> to remove <code>method="get"</code> attributes from <code>&lt;form></code> tags
 		 */
 
-		public void setRemoveFormAttributes(bool removeFormAttributes)
+		public void SetRemoveFormAttributes(bool removeFormAttributes)
 		{
-			this._removeFormAttributes = removeFormAttributes;
+			_removeFormAttributes = removeFormAttributes;
 		}
 
 		/**
@@ -2276,7 +2134,7 @@ namespace HtmlCompressor.Core.Internal
 		 * @return <code>true</code> if <code>type="text"</code> attributes will be removed from <code>&lt;input></code> tags
 		 */
 
-		public bool isRemoveInputAttributes()
+		public bool IsRemoveInputAttributes()
 		{
 			return _removeInputAttributes;
 		}
@@ -2287,9 +2145,9 @@ namespace HtmlCompressor.Core.Internal
 		 * @param removeInputAttributes set <code>true</code> to remove <code>type="text"</code> attributes from <code>&lt;input></code> tags
 		 */
 
-		public void setRemoveInputAttributes(bool removeInputAttributes)
+		public void SetRemoveInputAttributes(bool removeInputAttributes)
 		{
-			this._removeInputAttributes = removeInputAttributes;
+			_removeInputAttributes = removeInputAttributes;
 		}
 
 		/**
@@ -2298,7 +2156,7 @@ namespace HtmlCompressor.Core.Internal
 		 * @return <code>true</code> if bool attributes will be simplified
 		 */
 
-		public bool isSimpleBooleanAttributes()
+		public bool IsSimpleBooleanAttributes()
 		{
 			return _simpleBooleanAttributes;
 		}
@@ -2319,9 +2177,9 @@ namespace HtmlCompressor.Core.Internal
 		 * @param simpleBooleanAttributes set <code>true</code> to simplify bool attributes
 		 */
 
-		public void setSimpleBooleanAttributes(bool simpleBooleanAttributes)
+		public void SetSimpleBooleanAttributes(bool simpleBooleanAttributes)
 		{
-			this._simpleBooleanAttributes = simpleBooleanAttributes;
+			_simpleBooleanAttributes = simpleBooleanAttributes;
 		}
 
 		/**
@@ -2330,7 +2188,7 @@ namespace HtmlCompressor.Core.Internal
 		 * @return <code>true</code> if <code>javascript:</code> pseudo-protocol will be removed from inline event handlers.
 		 */
 
-		public bool isRemoveJavaScriptProtocol()
+		public bool IsRemoveJavaScriptProtocol()
 		{
 			return _removeJavaScriptProtocol;
 		}
@@ -2345,9 +2203,9 @@ namespace HtmlCompressor.Core.Internal
 		 * @param removeJavaScriptProtocol set <code>true</code> to remove <code>javascript:</code> pseudo-protocol from inline event handlers.
 		 */
 
-		public void setRemoveJavaScriptProtocol(bool removeJavaScriptProtocol)
+		public void SetRemoveJavaScriptProtocol(bool removeJavaScriptProtocol)
 		{
-			this._removeJavaScriptProtocol = removeJavaScriptProtocol;
+			_removeJavaScriptProtocol = removeJavaScriptProtocol;
 		}
 
 		/**
@@ -2356,7 +2214,7 @@ namespace HtmlCompressor.Core.Internal
 		 * @return <code>true</code> if <code>HTTP</code> protocol will be removed from <code>href</code>, <code>src</code>, <code>cite</code>, and <code>action</code> tag attributes.
 		 */
 
-		public bool isRemoveHttpProtocol()
+		public bool IsRemoveHttpProtocol()
 		{
 			return _removeHttpProtocol;
 		}
@@ -2377,9 +2235,9 @@ namespace HtmlCompressor.Core.Internal
 		 * @param removeHttpProtocol set <code>true</code> to remove <code>HTTP</code> protocol from tag attributes
 		 */
 
-		public void setRemoveHttpProtocol(bool removeHttpProtocol)
+		public void SetRemoveHttpProtocol(bool removeHttpProtocol)
 		{
-			this._removeHttpProtocol = removeHttpProtocol;
+			_removeHttpProtocol = removeHttpProtocol;
 		}
 
 		/**
@@ -2388,7 +2246,7 @@ namespace HtmlCompressor.Core.Internal
 		 * @return <code>true</code> if <code>HTTPS</code> protocol will be removed from <code>href</code>, <code>src</code>, <code>cite</code>, and <code>action</code> tag attributes.
 		 */
 
-		public bool isRemoveHttpsProtocol()
+		public bool IsRemoveHttpsProtocol()
 		{
 			return _removeHttpsProtocol;
 		}
@@ -2409,9 +2267,9 @@ namespace HtmlCompressor.Core.Internal
 		 * @param removeHttpsProtocol set <code>true</code> to remove <code>HTTP</code> protocol from tag attributes
 		 */
 
-		public void setRemoveHttpsProtocol(bool removeHttpsProtocol)
+		public void SetRemoveHttpsProtocol(bool removeHttpsProtocol)
 		{
-			this._removeHttpsProtocol = removeHttpsProtocol;
+			_removeHttpsProtocol = removeHttpsProtocol;
 		}
 
 		/**
@@ -2420,9 +2278,9 @@ namespace HtmlCompressor.Core.Internal
 		 * @return <code>true</code> if HTML compression statistics is generated
 		 */
 
-		public bool isGenerateStatistics()
+		public bool IsGenerateStatistics()
 		{
-			return generateStatistics;
+			return _generateStatistics;
 		}
 
 		/**
@@ -2437,9 +2295,9 @@ namespace HtmlCompressor.Core.Internal
 		 * @see #getStatistics()
 		 */
 
-		public void setGenerateStatistics(bool generateStatistics)
+		public void SetGenerateStatistics(bool generateStatistics)
 		{
-			this.generateStatistics = generateStatistics;
+			_generateStatistics = generateStatistics;
 		}
 
 		/**
@@ -2452,9 +2310,9 @@ namespace HtmlCompressor.Core.Internal
 		 * @see #setGenerateStatistics(bool)
 		 */
 
-		public HtmlCompressorStatistics getStatistics()
+		public HtmlCompressorStatistics GetStatistics()
 		{
-			return statistics;
+			return _statistics;
 		}
 
 		/**
@@ -2463,7 +2321,7 @@ namespace HtmlCompressor.Core.Internal
 		 * @return <code>true</code> if line breaks will be preserved. 
 		 */
 
-		public bool isPreserveLineBreaks()
+		public bool IsPreserveLineBreaks()
 		{
 			return _preserveLineBreaks;
 		}
@@ -2476,9 +2334,9 @@ namespace HtmlCompressor.Core.Internal
 		 * @param preserveLineBreaks set <code>true</code> to preserve line breaks
 		 */
 
-		public void setPreserveLineBreaks(bool preserveLineBreaks)
+		public void SetPreserveLineBreaks(bool preserveLineBreaks)
 		{
-			this._preserveLineBreaks = preserveLineBreaks;
+			_preserveLineBreaks = preserveLineBreaks;
 		}
 
 		/**
@@ -2487,7 +2345,7 @@ namespace HtmlCompressor.Core.Internal
 		 * @return a comma separated list of tags around which spaces will be removed. 
 		 */
 
-		public string getRemoveSurroundingSpaces()
+		public string GetRemoveSurroundingSpaces()
 		{
 			return _removeSurroundingSpaces;
 		}
@@ -2503,7 +2361,7 @@ namespace HtmlCompressor.Core.Internal
 		 * @param tagList a comma separated list of tags around which spaces will be removed
 		 */
 
-		public void setRemoveSurroundingSpaces(string tagList)
+		public void SetRemoveSurroundingSpaces(string tagList)
 		{
 			if (tagList != null && tagList.Length == 0)
 			{

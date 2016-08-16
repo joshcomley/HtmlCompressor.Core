@@ -17,18 +17,18 @@ namespace HtmlCompressor.Core
 
 		public string Compress(string html)
 		{
-			return _compressor.compress(html);
+			return _compressor.Compress(html);
 		}
 
 		public void AddPreservePattern(params Regex[] regexes)
 		{
-			var org = _compressor.getPreservePatterns();
+			var org = _compressor.GetPreservePatterns();
 
 			var preservePatterns = new List<Regex>();
 			if (org != null) preservePatterns.AddRange(org);
 			preservePatterns.AddRange(regexes);
 
-			_compressor.setPreservePatterns(preservePatterns);
+			_compressor.SetPreservePatterns(preservePatterns);
 		}
 	}
 }

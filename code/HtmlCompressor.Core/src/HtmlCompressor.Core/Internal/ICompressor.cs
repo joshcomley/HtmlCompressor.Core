@@ -2,6 +2,6 @@
 {
 	public interface ICompressor
 	{
-		string compress(string source);
+		string Compress(string source);
 	}
 }
