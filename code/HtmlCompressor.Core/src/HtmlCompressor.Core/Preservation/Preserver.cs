@@ -9,14 +9,14 @@ namespace HtmlCompression.Core.Preservation
 	{
 		private readonly string _key;
 		protected readonly List<string> _blocks;
-		public virtual bool Enabled { get; set; }
+		public virtual bool Enabled { get; set; } = true;
 		public Regex Pattern { get; set; }
 
 		public Preserver(Regex pattern)
 		{
 			Pattern = pattern;
 			_blocks = new List<string>();
-			_key = Guid.NewGuid().ToString().Replace("-", "");
+			_key = GetType().Name + Guid.NewGuid().ToString().Replace("-", "");
 		}
 
 		public IReadOnlyList<string> Blocks => _blocks.AsReadOnly();
@@ -87,7 +87,7 @@ namespace HtmlCompression.Core.Preservation
 			return match.Result(tempBlock);
 		}
 
-		public bool ExpandReplacement { get; set; } = true;
+		public bool ExpandReplacement { get; set; } = false;
 
 		protected virtual string GetTempBlock(int i)
 		{
@@ -96,8 +96,10 @@ namespace HtmlCompression.Core.Preservation
 
 		protected virtual string GenerateBlock(Match match)
 		{
-			return match.Groups[1].Value;
+			return match.Groups[BlockIndex].Value;
 		}
+
+		public int BlockIndex { get; set; } = 0;
 
 		protected virtual bool AssertMatch(Match match)
 		{
@@ -106,14 +108,13 @@ namespace HtmlCompression.Core.Preservation
 
 		public string Restore(string html)
 		{
-			if (!Enabled)
-			{
-				return html;
-			}
+			//if (!Enabled)
+			//{
+			//	return html;
+			//}
 			var matcher = new Regex(@"%%%~COMPRESS~" + _key + @"~(\d+?)~%%%").Matches(html);
 			var sb = new StringBuilder();
 			var lastValue = 0;
-
 			foreach (Match match in matcher)
 			{
 				var i = int.Parse(match.Groups[1].Value);

@@ -7,6 +7,7 @@ namespace HtmlCompression.Core.Preservation
 		public PreTagPreserver() : base(new Regex("(<pre[^>]*?>)(.*?)(</pre>)",
 			RegexOptions.Singleline | RegexOptions.IgnoreCase))
 		{
+			ExpandReplacement = true;
 		}
 	}
 }

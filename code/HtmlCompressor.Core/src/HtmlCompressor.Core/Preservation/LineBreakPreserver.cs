@@ -16,6 +16,7 @@ namespace HtmlCompression.Core.Preservation
 		{
 			_settings = settings;
 			ExpandReplacement = false;
+			BlockIndex = 1;
 		}
 	}
 }

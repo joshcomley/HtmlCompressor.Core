@@ -7,9 +7,11 @@ namespace HtmlCompression.Core.Preservation
 	/// </summary>
 	public class SkipPreserver : Preserver
 	{
-		public SkipPreserver(Regex pattern) : base(pattern)
+		public SkipPreserver() : base(new Regex("<!--\\s*\\{\\{\\{\\s*-->(.*?)<!--\\s*\\}\\}\\}\\s*-->",
+		  RegexOptions.Singleline | RegexOptions.IgnoreCase))
 		{
 			ExpandReplacement = false;
+			BlockIndex = 1;
 		}
 
 		protected override bool AssertMatch(Match match)

@@ -44,8 +44,7 @@ namespace HtmlCompression.Core
 
 		private readonly Preserver StylePreserver = new StylePreserver();
 
-		private readonly SkipPreserver SkipPreserver = new SkipPreserver(new Regex("<!--\\s*\\{\\{\\{\\s*-->(.*?)<!--\\s*\\}\\}\\}\\s*-->",
-		  RegexOptions.Singleline | RegexOptions.IgnoreCase));
+		private readonly SkipPreserver SkipPreserver = new SkipPreserver();
 
 		private readonly Preserver CondCommentPreserver;
 		private readonly Preserver InlineEventsPreserver = new InlineEventsPreserver();
@@ -304,7 +303,8 @@ namespace HtmlCompression.Core
 
 		private string ReturnBlocks(string html)
 		{
-			foreach (var preserver in Preservers)
+			var arr = Preservers.ToArray().Reverse();
+			foreach (var preserver in arr)
 			{
 				html = preserver.Restore(html);
 			}

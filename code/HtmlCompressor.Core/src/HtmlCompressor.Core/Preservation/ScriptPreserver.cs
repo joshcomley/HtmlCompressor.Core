@@ -17,6 +17,8 @@ namespace HtmlCompression.Core.Preservation
 		  RegexOptions.Singleline | RegexOptions.IgnoreCase))
 		{
 			_skipPreserver = skipPreserver;
+			BlockIndex = 2;
+			ExpandReplacement = true;
 		}
 
 		public override void Process(HtmlCompressor compressor)
@@ -83,7 +85,7 @@ namespace HtmlCompression.Core.Preservation
 			else
 			{
 				//some custom script, preserve it inside "skip blocks" so it won't be compressed with js compressor 
-				_skipPreserver.PreserveMatch(html, match, sb, lastValue, ref index, match.Groups[2].Value);
+				lastValue = _skipPreserver.PreserveMatch(html, match, sb, lastValue, ref index, match.Groups[2].Value);
 			}
 			return lastValue;
 		}

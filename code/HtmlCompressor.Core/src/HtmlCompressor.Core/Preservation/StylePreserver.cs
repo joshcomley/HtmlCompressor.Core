@@ -7,6 +7,7 @@ namespace HtmlCompression.Core.Preservation
 		public StylePreserver() : base(new Regex("(<style[^>]*?>)(.*?)(</style>)",
 			RegexOptions.Singleline | RegexOptions.IgnoreCase))
 		{
+			ExpandReplacement = true;
 		}
 
 		public override void Process(HtmlCompressor compressor)

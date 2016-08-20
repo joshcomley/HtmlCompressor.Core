@@ -7,6 +7,7 @@ namespace HtmlCompression.Core.Preservation
 		public TextAreaPreserver() : base(new Regex("(<textarea[^>]*?>)(.*?)(</textarea>)",
 			RegexOptions.Singleline | RegexOptions.IgnoreCase))
 		{
+			ExpandReplacement = true;
 		}
 	}
 }

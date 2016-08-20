@@ -6,6 +6,7 @@ namespace HtmlCompression.Core.Preservation
 	{
 		public EventPattern2Preserver() : base(new Regex("(\\son[a-z]+\\s*=\\s*')([^'\\\\\\r\\n]*(?:\\\\.[^'\\\\\\r\\n]*)*)(')", RegexOptions.IgnoreCase))
 		{
+			ExpandReplacement = true;
 		}
 	}
 }

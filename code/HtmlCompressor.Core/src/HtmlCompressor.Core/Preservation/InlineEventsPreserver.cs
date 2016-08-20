@@ -7,6 +7,7 @@ namespace HtmlCompression.Core.Preservation
 		public InlineEventsPreserver() : base(new Regex("(<!(?:--)?\\[[^\\]]+?]>)(.*?)(<!\\[[^\\]]+]-->)",
 			RegexOptions.Singleline | RegexOptions.IgnoreCase))
 		{
+			ExpandReplacement = true;
 		}
 
 		public override void Process(HtmlCompressor compressor)

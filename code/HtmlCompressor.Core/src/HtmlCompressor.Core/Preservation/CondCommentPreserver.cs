@@ -12,6 +12,7 @@ namespace HtmlCompression.Core.Preservation
 		{
 			_compressor = compressor;
 			ExpandReplacement = false;
+			BlockIndex = 1;
 		}
 
 		public override string Preserve(string html)
