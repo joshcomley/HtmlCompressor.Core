@@ -6,8 +6,8 @@
   </PropertyGroup>
   <Import Project="$(VSToolsPath)\DotNet\Microsoft.DotNet.Props" Condition="'$(VSToolsPath)' != ''" />
   <PropertyGroup Label="Globals">
-    <ProjectGuid>47b89296-466e-471e-b581-e8a8228025c5</ProjectGuid>
-    <RootNamespace>HtmlCompression.Core</RootNamespace>
+    <ProjectGuid>ef0ce2d9-39c9-4f81-9dfd-5fd49cf97abc</ProjectGuid>
+    <RootNamespace>HtmlCompression.Console</RootNamespace>
     <BaseIntermediateOutputPath Condition="'$(BaseIntermediateOutputPath)'=='' ">.\obj</BaseIntermediateOutputPath>
     <OutputPath Condition="'$(OutputPath)'=='' ">.\bin\</OutputPath>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>

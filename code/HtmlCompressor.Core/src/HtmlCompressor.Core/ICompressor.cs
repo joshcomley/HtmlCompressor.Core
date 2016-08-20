@@ -1,4 +1,4 @@
-﻿namespace HtmlCompressor.Core
+﻿namespace HtmlCompression.Core
 {
 	public interface ICompressor
 	{

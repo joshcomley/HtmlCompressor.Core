@@ -1,12 +1,10 @@
 ﻿using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
-namespace HtmlCompressor.Core
+namespace HtmlCompression.Core
 {
 	public class HtmlCompressorSettings
 	{
-		private string _removeSurroundingSpaces;
-
 		/// <summary>
 		/// Gets or sets whether JavaScript compression is enabled.
 		/// </summary>
@@ -339,30 +337,26 @@ namespace HtmlCompressor.Core
 		/// </returns>
 		public bool PreserveLineBreaks { get; set; }
 
+		/// <summary>
+		/// Gets or sets whitespace removal setting
+		/// </summary>
+		/// <value>
+		/// Enum specifying action to take when removing whitespace surrounding tags
+		/// </value>
+		/// <returns>
+		/// Enum specifying action to take when removing whitespace surrounding tags
+		/// </returns>
+		public SurroundingSpaces SurroundingSpaces { get; set; } = SurroundingSpaces.RemoveForAllTags;
 
 		/// <summary>
 		/// Gets or sets tag list to allow reomval of whitespace around
 		/// </summary>
 		/// <value>
-		/// Returns a comma separated list of tags around which spaces will be removed. Enables surrounding spaces removal around provided comma separated list of tags. <p>Besides custom defined lists, you can pass one of 3 predefined lists of tags: {@link #BLOCK_TAGS_MIN BLOCK_TAGS_MIN}, {@link #BLOCK_TAGS_MAX BLOCK_TAGS_MAX}, {@link #ALL_TAGS ALL_TAGS}.
+		/// A list of tags around which spaces will be removed. Enables surrounding spaces removal around provided comma separated list of tags. <p>Besides custom defined lists, you can pass one of 3 predefined lists of tags: {@link #BLOCK_TAGS_MIN BLOCK_TAGS_MIN}, {@link #BLOCK_TAGS_MAX BLOCK_TAGS_MAX}, {@link #ALL_TAGS ALL_TAGS}.
 		/// </value>
 		/// <returns>
-		/// A comma separated list of tags around which spaces will be removed.@param tagList a comma separated list of tags around which spaces will be removed
+		/// Returns a list of tags around which spaces will be removed.@param tagList a comma separated list of tags around which spaces will be removed
 		/// </returns>
-		public string RemoveSurroundingSpaces
-		{
-			get { return _removeSurroundingSpaces; }
-			set
-			{
-				if (value != null && value.Length == 0)
-				{
-					_removeSurroundingSpaces = null;
-				}
-				else
-				{
-					_removeSurroundingSpaces = value;
-				}
-			}
-		}
+		public List<string> RemoveSurroundingSpacesForTags { get; set; } = new List<string>();
 	}
 }

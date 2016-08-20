@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
-namespace HtmlCompressor.Core
+namespace HtmlCompression.Core
 {
 	/// <summary>
 	/// This is the only public class you should use. Although there are other classes
