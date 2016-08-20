@@ -59,7 +59,7 @@ namespace HtmlCompression.Core.Preservation
 
 			//detect CDATA wrapper
 			var cdataWrapper = false;
-			var matcher = Preservation.ScriptPreserver.CdataPattern.Match(source);
+			var matcher = ScriptPreserver.CdataPattern.Match(source);
 			if (matcher.Success)
 			{
 				cdataWrapper = true;
