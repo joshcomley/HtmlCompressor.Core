@@ -91,7 +91,7 @@ namespace HtmlCompression.Core.Preservation
 
 		protected virtual string GetTempBlock(int i)
 		{
-			return string.Format("%%%~COMPRESS~{0}~{1}~%%%", _key, i);
+			return $"%%%~COMPRESS~{_key}~{i}~%%%";
 		}
 
 		protected virtual string GenerateBlock(Match match)
@@ -112,7 +112,7 @@ namespace HtmlCompression.Core.Preservation
 			//{
 			//	return html;
 			//}
-			var matcher = new Regex(@"%%%~COMPRESS~" + _key + @"~(\d+?)~%%%").Matches(html);
+			var matcher = new Regex($@"%%%~COMPRESS~{_key}~(\d+?)~%%%").Matches(html);
 			var sb = new StringBuilder();
 			var lastValue = 0;
 			foreach (Match match in matcher)
@@ -127,6 +127,7 @@ namespace HtmlCompression.Core.Preservation
 					lastValue = match.Index + match.Length;
 				}
 			}
+			_blocks.Clear();
 
 			//matcher.appendTail(sb);
 			sb.Append(html.Substring(lastValue));
